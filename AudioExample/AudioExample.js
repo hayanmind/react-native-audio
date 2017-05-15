@@ -20,7 +20,7 @@ class AudioExample extends Component {
       recording: false,
       stoppedRecording: false,
       finished: false,
-      audioPath: AudioUtils.DocumentDirectoryPath + '/test.aac',
+      audioPath: AudioUtils.DocumentDirectoryPath + '/test.wav',
       hasPermission: undefined,
     };
 
@@ -40,8 +40,8 @@ class AudioExample extends Component {
 
         if (!hasPermission) return;
 
-        this.prepareRecordingPath(this.state.audioPath);
-
+        // this.prepareRecordingPath(this.state.audioPath);
+        console.log(AudioRecorder);
         AudioRecorder.onProgress = (data) => {
           this.setState({currentTime: Math.floor(data.currentTime)});
         };
@@ -113,7 +113,7 @@ class AudioExample extends Component {
       this.setState({stoppedRecording: true, recording: false});
 
       try {
-        const filePath = await AudioRecorder.stopRecording();
+        const filePath = await AudioRecorder.stopStreaming();
 
         if (Platform.OS === 'android') {
           this._finishRecording(true, filePath);
@@ -168,7 +168,7 @@ class AudioExample extends Component {
       this.setState({recording: true});
 
       try {
-        const filePath = await AudioRecorder.startRecording();
+        const filePath = await AudioRecorder.startStreaming(this.state.audioPath);
       } catch (error) {
         console.error(error);
       }

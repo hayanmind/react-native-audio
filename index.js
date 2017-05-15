@@ -65,6 +65,12 @@ var AudioRecorder = {
   stopRecording: function() {
     return AudioRecorderManager.stopRecording();
   },
+  startStreaming: function(path) {
+    return AudioRecorderManager.startStreaming(path);
+  },
+  stopStreaming: function() {
+    return AudioRecorderManager.stopStreaming();
+  },
   checkAuthorizationStatus: AudioRecorderManager.checkAuthorizationStatus,
   requestAuthorization: AudioRecorderManager.requestAuthorization,
   removeListeners: function() {

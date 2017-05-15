@@ -20,12 +20,17 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import android.content.pm.PackageManager;
+import android.media.AudioFormat;
+import android.media.AudioRecord;
+import android.os.AsyncTask;
 import android.os.Environment;
 import android.media.MediaRecorder;
 import android.media.AudioManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
+import android.widget.Toast;
+
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 
 import java.io.FileInputStream;
@@ -48,6 +53,9 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
   private boolean isRecording = false;
   private Timer timer;
   private int recorderSecondsElapsed;
+
+  // For AudioRecord Class
+  private RecordWaveTask recordTask = null;
 
 
   public AudioRecorderManager(ReactApplicationContext reactContext) {
@@ -152,6 +160,53 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
         Log.d("INVALID_OUPUT_FORMAT", "USING MediaRecorder.OutputFormat.DEFAULT : "+MediaRecorder.OutputFormat.DEFAULT);
         return MediaRecorder.OutputFormat.DEFAULT;
 
+    }
+  }
+
+  @ReactMethod
+  public void prepareStreamingAtPath(String recordingPath, ReadableMap recordingSettings, Promise promise) {
+
+  }
+
+  @ReactMethod
+  public void startStreaming(String recordingPath, Promise promise){
+    if (recordTask == null) {
+      recordTask = new RecordWaveTask(context);
+    } else {
+      recordTask.setContext(context);
+    }
+    switch (recordTask.getStatus()) {
+      case RUNNING:
+        Toast.makeText(context, "Task already running...", Toast.LENGTH_SHORT).show();
+        logAndRejectPromise(promise, "INVALID_STATE", "Please call stopStreaming before starting streaming");
+        return;
+      case FINISHED:
+        recordTask = new RecordWaveTask(context);
+        break;
+      case PENDING:
+        if (recordTask.isCancelled()) {
+          recordTask = new RecordWaveTask(context);
+        }
+    }
+    File wavFile = new File(recordingPath);
+    Toast.makeText(context, wavFile.getAbsolutePath(), Toast.LENGTH_LONG).show();
+    recordTask.execute(wavFile);
+
+    isRecording = true;
+    currentOutputFile = recordingPath;
+    promise.resolve(currentOutputFile);
+  }
+
+  @ReactMethod
+  public void stopStreaming(Promise promise){
+    if (!recordTask.isCancelled() && recordTask.getStatus() == AsyncTask.Status.RUNNING) {
+      isRecording = false;
+      recordTask.cancel(false);
+      promise.resolve(currentOutputFile);
+      sendEvent("recordingFinished", null);
+    } else {
+      Toast.makeText(context, "Task not running.", Toast.LENGTH_SHORT).show();
+      logAndRejectPromise(promise, "INVALID_STATE", "Please call startStreaming before stopping streaming");
     }
   }
 
