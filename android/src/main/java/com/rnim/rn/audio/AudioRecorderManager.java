@@ -61,6 +61,11 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
   public AudioRecorderManager(ReactApplicationContext reactContext) {
     super(reactContext);
     this.context = reactContext;
+    if (recordTask == null) {
+      recordTask = new RecordWaveTask(context);
+    } else {
+      recordTask.setContext(context);
+    }
   }
 
   @Override
@@ -170,14 +175,9 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void startStreaming(String recordingPath, Promise promise){
-    if (recordTask == null) {
-      recordTask = new RecordWaveTask(context);
-    } else {
-      recordTask.setContext(context);
-    }
     switch (recordTask.getStatus()) {
       case RUNNING:
-        Toast.makeText(context, "Task already running...", Toast.LENGTH_SHORT).show();
+        // Toast.makeText(context, "Task already running...", Toast.LENGTH_SHORT).show();
         logAndRejectPromise(promise, "INVALID_STATE", "Please call stopStreaming before starting streaming");
         return;
       case FINISHED:
@@ -189,7 +189,7 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
         }
     }
     File wavFile = new File(recordingPath);
-    Toast.makeText(context, wavFile.getAbsolutePath(), Toast.LENGTH_LONG).show();
+    // Toast.makeText(context, wavFile.getAbsolutePath(), Toast.LENGTH_LONG).show();
     recordTask.execute(wavFile);
 
     isRecording = true;
@@ -198,14 +198,19 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public void stopStreaming(Promise promise){
+  public void stopStreaming(final Promise promise){
     if (!recordTask.isCancelled() && recordTask.getStatus() == AsyncTask.Status.RUNNING) {
       isRecording = false;
+      recordTask.setCancelCompleteListener(new RecordWaveTask.OnCancelCompleteListener() {
+        @Override
+        public void onCancelCompleted() {
+          promise.resolve(currentOutputFile);
+          sendEvent("recordingFinished", null);
+        }
+      });
       recordTask.cancel(false);
-      promise.resolve(currentOutputFile);
-      sendEvent("recordingFinished", null);
     } else {
-      Toast.makeText(context, "Task not running.", Toast.LENGTH_SHORT).show();
+      // Toast.makeText(context, "Task not running.", Toast.LENGTH_SHORT).show();
       logAndRejectPromise(promise, "INVALID_STATE", "Please call startStreaming before stopping streaming");
     }
   }
