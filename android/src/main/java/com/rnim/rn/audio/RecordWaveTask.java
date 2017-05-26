@@ -34,6 +34,7 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
     private static final int BUFFER_SIZE = 2 * AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_MASK, ENCODING);
 
     private Context ctx;
+    private File outputFile;
 
     public RecordWaveTask(Context ctx) {
         setContext(ctx);
@@ -43,14 +44,25 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
         this.ctx = ctx;
     }
 
+    public void setOutputFile(File file) { this.outputFile = file; }
+
     // Step 1 - This interface defines the type of messages I want to communicate to my owner
     public interface OnCancelCompleteListener {
         public void onCancelCompleted();
     }
-    private OnCancelCompleteListener listener = null;
+    private OnCancelCompleteListener cancelCompleteListener = null;
 
     public void setCancelCompleteListener(OnCancelCompleteListener listener) {
-        this.listener = listener;
+        this.cancelCompleteListener = listener;
+    }
+
+    public interface OnStreamListener {
+        public void onDataReceived(byte[] buffer);
+    }
+    private OnStreamListener streamListener = null;
+
+    public void setStreamListener(OnStreamListener listener) {
+        this.streamListener = listener;
     }
 
     /**
@@ -71,7 +83,7 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
         try {
             // Open our two resources
             audioRecord = new AudioRecord(AUDIO_SOURCE, SAMPLE_RATE, CHANNEL_MASK, ENCODING, BUFFER_SIZE);
-            wavOut = new FileOutputStream(files[0]);
+            wavOut = new FileOutputStream(this.outputFile);
 
             // Write out the wav file header
             writeWavHeader(wavOut, CHANNEL_MASK, SAMPLE_RATE, ENCODING);
@@ -91,14 +103,23 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
                 // WAVs cannot be > 4 GB due to the use of 32 bit unsigned integers.
                 if (total + read > 4294967295L) {
                     // Write as many bytes as we can before hitting the max size
+                    byte[] tmpBuffer = new byte[BUFFER_SIZE];
                     for (int i = 0; i < read && total <= 4294967295L; i++, total++) {
                         wavOut.write(buffer[i]);
+                        tmpBuffer[i] = buffer[i];
+                    }
+                    if (this.streamListener != null) {
+                        this.streamListener.onDataReceived(tmpBuffer);
                     }
                     run = false;
                 } else {
                     // Write out the entire read buffer
                     wavOut.write(buffer, 0, read);
                     total += read;
+                    if (this.streamListener != null) {
+                        Log.d("onDataReceived", "RecordWaveTask - " + buffer.length + "");
+                        this.streamListener.onDataReceived(buffer.clone());
+                    }
                 }
             }
         } catch (IOException ex) {
@@ -292,8 +313,8 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
             }
         }
 
-        if (listener != null) {
-            listener.onCancelCompleted();
+        if (cancelCompleteListener != null) {
+            cancelCompleteListener.onCancelCompleted();
         }
     }
 }

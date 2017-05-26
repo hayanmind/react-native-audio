@@ -40,7 +40,8 @@ class AudioExample extends Component {
 
         if (!hasPermission) return;
 
-        // this.prepareRecordingPath(this.state.audioPath);
+        this.prepareRecordingPath(this.state.audioPath);
+        AudioRecorder.prepareStreamingAtPath(this.state.audioPath);
         console.log(AudioRecorder);
         AudioRecorder.onProgress = (data) => {
           this.setState({currentTime: Math.floor(data.currentTime)});
@@ -52,6 +53,10 @@ class AudioExample extends Component {
             this._finishRecording(data.status === "OK", data.audioFileURL);
           }
         };
+
+        AudioRecorder.onDataReceived = (data) => {
+          console.log(data);
+        }
       });
     }
 
@@ -168,7 +173,7 @@ class AudioExample extends Component {
       this.setState({recording: true});
 
       try {
-        const filePath = await AudioRecorder.startStreaming(this.state.audioPath);
+        const filePath = await AudioRecorder.startStreaming();
       } catch (error) {
         console.error(error);
       }

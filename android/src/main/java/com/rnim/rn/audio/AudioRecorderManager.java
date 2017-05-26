@@ -10,6 +10,7 @@ import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReadableMap;
+import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
 
 import java.io.File;
@@ -170,30 +171,48 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void prepareStreamingAtPath(String recordingPath, ReadableMap recordingSettings, Promise promise) {
+    File wavFile = new File(recordingPath);
+    recordTask = new RecordWaveTask(context);
+    recordTask.setOutputFile(wavFile);
+    recordTask.setStreamListener(new RecordWaveTask.OnStreamListener() {
 
+      @Override
+      public void onDataReceived(byte[] buffer) {
+        Log.d("onDataReceived", buffer.length + "");
+        WritableArray body = Arguments.createArray();
+        for (byte value: buffer) {
+          body.pushInt((int) value);
+        }
+        sendEvent("dataReceived", body);
+      }
+    });
+    currentOutputFile = recordingPath;
   }
 
   @ReactMethod
-  public void startStreaming(String recordingPath, Promise promise){
+  public void startStreaming(Promise promise){
+    if (recordTask == null){
+      logAndRejectPromise(promise, "STREAMING_NOT_PREPARED", "Please call prepareStreamingAtPath before starting streaming");
+      return;
+    }
     switch (recordTask.getStatus()) {
       case RUNNING:
         // Toast.makeText(context, "Task already running...", Toast.LENGTH_SHORT).show();
         logAndRejectPromise(promise, "INVALID_STATE", "Please call stopStreaming before starting streaming");
         return;
       case FINISHED:
-        recordTask = new RecordWaveTask(context);
+        logAndRejectPromise(promise, "STREAMING_NOT_PREPARED", "Please call prepareStreamingAtPath before starting streaming");
         break;
       case PENDING:
         if (recordTask.isCancelled()) {
-          recordTask = new RecordWaveTask(context);
+          // recordTask = new RecordWaveTask(context);
         }
     }
-    File wavFile = new File(recordingPath);
-    // Toast.makeText(context, wavFile.getAbsolutePath(), Toast.LENGTH_LONG).show();
-    recordTask.execute(wavFile);
+    startTimer();
+
+    recordTask.execute();
 
     isRecording = true;
-    currentOutputFile = recordingPath;
     promise.resolve(currentOutputFile);
   }
 
@@ -204,11 +223,13 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
       recordTask.setCancelCompleteListener(new RecordWaveTask.OnCancelCompleteListener() {
         @Override
         public void onCancelCompleted() {
+          recordTask = null;
           promise.resolve(currentOutputFile);
           sendEvent("recordingFinished", null);
         }
       });
       recordTask.cancel(false);
+      stopTimer();
     } else {
       // Toast.makeText(context, "Task not running.", Toast.LENGTH_SHORT).show();
       logAndRejectPromise(promise, "INVALID_STATE", "Please call startStreaming before stopping streaming");

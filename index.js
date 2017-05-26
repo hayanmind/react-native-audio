@@ -12,6 +12,37 @@ import ReactNative, {
 var AudioRecorderManager = NativeModules.AudioRecorderManager;
 
 var AudioRecorder = {
+  prepareStreamingAtPath: function(path, options) {
+    if (this.progressSubscription) this.progressSubscription.remove();
+    this.progressSubscription = NativeAppEventEmitter.addListener('recordingProgress',
+      (data) => {
+        if (this.onProgress) {
+          this.onProgress(data);
+        }
+      }
+    );
+
+    if (this.finishedSubscription) this.finishedSubscription.remove();
+    this.finishedSubscription = NativeAppEventEmitter.addListener('recordingFinished',
+      (data) => {
+        if (this.onFinished) {
+          this.onFinished(data);
+        }
+      }
+    );
+
+    if (this.dataReceivedSubscription) this.dataReceivedSubscription.remove();
+    this.dataReceivedSubscription = NativeAppEventEmitter.addListener('dataReceived',
+      (data) => {
+        console.log(data);
+        if (this.onDataReceived) {
+          this.onDataReceived(data);
+        }
+      }
+    );
+
+    AudioRecorderManager.prepareStreamingAtPath(path, options);
+  },
   prepareRecordingAtPath: function(path, options) {
     if (this.progressSubscription) this.progressSubscription.remove();
     this.progressSubscription = NativeAppEventEmitter.addListener('recordingProgress',
@@ -65,8 +96,8 @@ var AudioRecorder = {
   stopRecording: function() {
     return AudioRecorderManager.stopRecording();
   },
-  startStreaming: function(path) {
-    return AudioRecorderManager.startStreaming(path);
+  startStreaming: function() {
+    return AudioRecorderManager.startStreaming();
   },
   stopStreaming: function() {
     return AudioRecorderManager.stopStreaming();
@@ -76,6 +107,7 @@ var AudioRecorder = {
   removeListeners: function() {
     if (this.progressSubscription) this.progressSubscription.remove();
     if (this.finishedSubscription) this.finishedSubscription.remove();
+    if (this.dataReceivedSubscription) this.dataReceivedSubscription.remove();
   },
 };
 
