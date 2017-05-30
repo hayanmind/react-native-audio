@@ -41,7 +41,31 @@ var AudioRecorder = {
       }
     );
 
-    AudioRecorderManager.prepareStreamingAtPath(path, options);
+    var defaultOptions = {
+      SampleRate: 44100.0,
+      Channels: 2,
+      AudioQuality: 'High',
+      AudioEncoding: 'ima4',
+      OutputFormat: 'mpeg_4',
+      MeteringEnabled: false,
+      AudioEncodingBitRate: 32000
+    };
+
+    var recordingOptions = {...defaultOptions, ...options};
+
+    if (Platform.OS === 'ios') {
+      console.log('prepareStreamingAtPath()');
+      AudioRecorderManager.prepareStreamingAtPath(
+        path,
+        recordingOptions.SampleRate,
+        recordingOptions.Channels,
+        recordingOptions.AudioQuality,
+        recordingOptions.AudioEncoding,
+        recordingOptions.MeteringEnabled
+      );
+    } else {
+      return AudioRecorderManager.prepareStreamingAtPath(path, recordingOptions);
+    }
   },
   prepareRecordingAtPath: function(path, options) {
     if (this.progressSubscription) this.progressSubscription.remove();
@@ -97,6 +121,8 @@ var AudioRecorder = {
     return AudioRecorderManager.stopRecording();
   },
   startStreaming: function() {
+    console.log(AudioRecorderManager);
+    console.log('???');
     return AudioRecorderManager.startStreaming();
   },
   stopStreaming: function() {

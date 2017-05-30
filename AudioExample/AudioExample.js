@@ -41,7 +41,15 @@ class AudioExample extends Component {
         if (!hasPermission) return;
 
         this.prepareRecordingPath(this.state.audioPath);
-        AudioRecorder.prepareStreamingAtPath(this.state.audioPath);
+        console.log('hi3');
+        AudioRecorder.prepareStreamingAtPath(this.state.audioPath, {
+          SampleRate: 22050,
+          Channels: 1,
+          AudioQuality: "Low",
+          AudioEncoding: "aac",
+          AudioEncodingBitRate: 32000,
+        });
+        console.log('hi2');
         console.log(AudioRecorder);
         AudioRecorder.onProgress = (data) => {
           this.setState({currentTime: Math.floor(data.currentTime)});

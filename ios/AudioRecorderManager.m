@@ -12,6 +12,7 @@
 #import <React/RCTUtils.h>
 #import <React/RCTEventDispatcher.h>
 #import <AVFoundation/AVFoundation.h>
+#import "StreamingModule.h"
 
 NSString *const AudioRecorderEventProgress = @"recordingProgress";
 NSString *const AudioRecorderEventFinished = @"recordingFinished";
@@ -32,6 +33,8 @@ NSString *const AudioRecorderEventFinished = @"recordingFinished";
   AVAudioSession *_recordSession;
   BOOL _meteringEnabled;
 }
+
+StreamingModule* streamingModule;
 
 @synthesize bridge = _bridge;
 
@@ -236,6 +239,28 @@ RCT_EXPORT_METHOD(requestAuthorization:(RCTPromiseResolveBlock)resolve
     }
   }];
 }
+
+RCT_EXPORT_METHOD(prepareStreamingAtPath:(NSString *)path sampleRate:(float)sampleRate channels:(nonnull NSNumber *)channels quality:(NSString *)quality encoding:(NSString *)encoding meteringEnabled:(BOOL)meteringEnabled)
+{
+    NSLog(@"PrepareStreaming");
+    streamingModule = [[StreamingModule alloc] init];
+    _audioFileURL = [NSURL fileURLWithPath:path];
+}
+
+RCT_EXPORT_METHOD(startStreaming)
+{
+    NSLog(@"startStreaming");
+    NSLog(@"%@", _audioFileURL);
+    [streamingModule startRecording: CFBridgingRetain(_audioFileURL)];
+}
+
+RCT_EXPORT_METHOD(stopStreaming)
+{
+    NSLog(@"stopStreaming");
+    [streamingModule stopRecording];
+
+}
+
 
 - (NSString *)getPathForDirectory:(int)directory
 {
