@@ -16,6 +16,7 @@
 
 NSString *const AudioRecorderEventProgress = @"recordingProgress";
 NSString *const AudioRecorderEventFinished = @"recordingFinished";
+NSString *const AudioRecorderEventDataReceived = @"dataReceived";
 
 @implementation AudioRecorderManager {
 
@@ -242,9 +243,19 @@ RCT_EXPORT_METHOD(requestAuthorization:(RCTPromiseResolveBlock)resolve
 
 RCT_EXPORT_METHOD(prepareStreamingAtPath:(NSString *)path sampleRate:(float)sampleRate channels:(nonnull NSNumber *)channels quality:(NSString *)quality encoding:(NSString *)encoding meteringEnabled:(BOOL)meteringEnabled)
 {
-    NSLog(@"PrepareStreaming");
+    NSLog(@"prepareStreaming");
     streamingModule = [[StreamingModule alloc] init];
-    [streamingModule prepare];
+    [streamingModule prepare:^(AVAudioPCMBuffer *buf){
+        NSLog(@"%@", buf);
+        NSMutableArray *body = [[NSMutableArray alloc] init];
+        float * const left = [buf floatChannelData][0];
+        for(int i=0; i<buf.frameLength; i++) {
+            NSNumber *value = [NSNumber numberWithFloat:left[i]];
+            [body addObject: value];
+        }
+        NSLog(@"%@", body);
+        [self.bridge.eventDispatcher sendAppEventWithName:AudioRecorderEventDataReceived body:body];
+    }];
     _audioFileURL = [NSURL fileURLWithPath:path];
 }
 
@@ -258,7 +269,7 @@ RCT_EXPORT_METHOD(startStreaming)
 RCT_EXPORT_METHOD(stopStreaming)
 {
     NSLog(@"stopStreaming");
-    [streamingModule stop];
+    [streamingModule pause];
 
 }
 

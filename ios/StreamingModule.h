@@ -11,10 +11,11 @@
 @interface StreamingModule : NSObject
 {
     AVAudioEngine *engine;
+    void (^_completionHandler)(AVAudioPCMBuffer *buf);
 }
 
-- (void)prepare;
+- (void)prepare:(void(^)(AVAudioPCMBuffer *))handler;
 - (void)start;
-- (void)stop;
+- (void)pause;
 
 @end
