@@ -244,6 +244,7 @@ RCT_EXPORT_METHOD(prepareStreamingAtPath:(NSString *)path sampleRate:(float)samp
 {
     NSLog(@"PrepareStreaming");
     streamingModule = [[StreamingModule alloc] init];
+    [streamingModule prepare];
     _audioFileURL = [NSURL fileURLWithPath:path];
 }
 
@@ -251,13 +252,13 @@ RCT_EXPORT_METHOD(startStreaming)
 {
     NSLog(@"startStreaming");
     NSLog(@"%@", _audioFileURL);
-    [streamingModule startRecording: CFBridgingRetain(_audioFileURL)];
+    [streamingModule start];
 }
 
 RCT_EXPORT_METHOD(stopStreaming)
 {
     NSLog(@"stopStreaming");
-    [streamingModule stopRecording];
+    [streamingModule stop];
 
 }
 
