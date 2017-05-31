@@ -269,8 +269,15 @@ RCT_EXPORT_METHOD(startStreaming)
 RCT_EXPORT_METHOD(stopStreaming)
 {
     NSLog(@"stopStreaming");
-    [streamingModule pause];
+    [streamingModule stop];
 
+}
+
+RCT_EXPORT_METHOD(pauseStreaming)
+{
+    NSLog(@"pauseStreaming");
+    [streamingModule pause];
+    
 }
 
 

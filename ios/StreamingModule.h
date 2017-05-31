@@ -17,5 +17,6 @@
 - (void)prepare:(void(^)(AVAudioPCMBuffer *))handler;
 - (void)start;
 - (void)pause;
+- (void)stop;
 
 @end

@@ -24,9 +24,16 @@
 }
 
 - (void)start {
-    NSError *error = nil;
-    NSLog(@"%@", [engine inputNode]);
+    if (engine == nil) {
+        if (_completionHandler != nil) {
+            [self prepare:_completionHandler];
+        } else {
+            NSLog(@"Have to prepare before start");
+            return;
+        }
+    }
     
+    NSError *error = nil;
     if (![engine startAndReturnError:&error]) {
         NSLog(@"engine failed to start: %@", error);
         return;
@@ -34,9 +41,14 @@
 }
 
 - (void)pause {
-    // AVAudioInputNode *input = [engine inputNode];
-    // [input removeTapOnBus: 0];
     [engine pause];
+}
+
+- (void)stop {
+    AVAudioInputNode *input = [engine inputNode];
+    [input removeTapOnBus: 0];
+    [engine stop];
+    engine = nil;
 }
 
 @end
