@@ -10,23 +10,32 @@
 
 @implementation StreamingModule
 
-- (void)prepare:(void(^)(AVAudioPCMBuffer *))handler {
+- (void)prepare:(NSURL *)recordingFileUrl handler:(void(^)(AVAudioPCMBuffer *))handler {
     _completionHandler = [handler copy];
+    fileUrl = recordingFileUrl;
     
     engine = [[AVAudioEngine alloc] init];
     
     AVAudioInputNode *input = [engine inputNode];
     AVAudioFormat *format = [input outputFormatForBus: 0];
+    
+    NSError *error = nil;
+    AVAudioFile *file = [[AVAudioFile alloc] initForWriting:fileUrl
+                                                   settings:format.settings
+                                                      error:&error];
+    
     [input installTapOnBus: 0 bufferSize: 8192 format: format block: ^(AVAudioPCMBuffer *buf, AVAudioTime *when) {
         // ‘buf' contains audio captured from input node at time 'when'
         _completionHandler(buf);
+        NSError *wrtieFromBufferError = nil;
+        [file writeFromBuffer:buf error:&wrtieFromBufferError];
     }];
 }
 
 - (void)start {
     if (engine == nil) {
-        if (_completionHandler != nil) {
-            [self prepare:_completionHandler];
+        if (_completionHandler != nil && fileUrl != nil) {
+            [self prepare:fileUrl handler:_completionHandler];
         } else {
             NSLog(@"Have to prepare before start");
             return;

@@ -12,9 +12,11 @@
 {
     AVAudioEngine *engine;
     void (^_completionHandler)(AVAudioPCMBuffer *buf);
+    NSTimeInterval currentTime;
+    NSURL *fileUrl;
 }
 
-- (void)prepare:(void(^)(AVAudioPCMBuffer *))handler;
+- (void)prepare:(NSURL*)recordingFileUrl handler:(void(^)(AVAudioPCMBuffer *))handler;
 - (void)start;
 - (void)pause;
 - (void)stop;

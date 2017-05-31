@@ -244,19 +244,22 @@ RCT_EXPORT_METHOD(requestAuthorization:(RCTPromiseResolveBlock)resolve
 RCT_EXPORT_METHOD(prepareStreamingAtPath:(NSString *)path sampleRate:(float)sampleRate channels:(nonnull NSNumber *)channels quality:(NSString *)quality encoding:(NSString *)encoding meteringEnabled:(BOOL)meteringEnabled)
 {
     NSLog(@"prepareStreaming");
-    streamingModule = [[StreamingModule alloc] init];
-    [streamingModule prepare:^(AVAudioPCMBuffer *buf){
-        NSLog(@"%@", buf);
-        NSMutableArray *body = [[NSMutableArray alloc] init];
-        float * const left = [buf floatChannelData][0];
-        for(int i=0; i<buf.frameLength; i++) {
-            NSNumber *value = [NSNumber numberWithFloat:left[i]];
-            [body addObject: value];
-        }
-        NSLog(@"%@", body);
-        [self.bridge.eventDispatcher sendAppEventWithName:AudioRecorderEventDataReceived body:body];
-    }];
     _audioFileURL = [NSURL fileURLWithPath:path];
+    
+    streamingModule = [[StreamingModule alloc] init];
+    [streamingModule prepare:_audioFileURL
+                     handler:^(AVAudioPCMBuffer *buf){
+                         NSLog(@"%@", buf);
+                         NSMutableArray *body = [[NSMutableArray alloc] init];
+                         float * const left = [buf floatChannelData][0];
+                         for(int i=0; i<buf.frameLength; i++) {
+                             NSNumber *value = [NSNumber numberWithFloat:left[i]];
+                             [body addObject: value];
+                         }
+                         NSLog(@"%@", body);
+                         [self.bridge.eventDispatcher sendAppEventWithName:AudioRecorderEventDataReceived body:body];
+                     }
+     ];
 }
 
 RCT_EXPORT_METHOD(startStreaming)
