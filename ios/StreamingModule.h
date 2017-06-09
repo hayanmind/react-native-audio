@@ -10,13 +10,14 @@
 
 @interface StreamingModule : NSObject
 {
-    AVAudioEngine *engine;
-    void (^_completionHandler)(AVAudioPCMBuffer *buf);
-    NSTimeInterval currentTime;
-    NSURL *fileUrl;
+    AVAudioEngine *_engine;
+    void (^_audioDataReceived)(AVAudioPCMBuffer *buf);
+    NSTimeInterval _currentTime;
+    NSURL *_fileUrl;
+    NSDictionary *_settings;
 }
 
-- (void)prepare:(NSURL*)recordingFileUrl handler:(void(^)(AVAudioPCMBuffer *))handler;
+- (void)prepare:(NSURL*)recordingFileUrl settings:(NSDictionary*)settings handler:(void(^)(AVAudioPCMBuffer *))handler;
 - (void)start;
 - (void)pause;
 - (void)stop;

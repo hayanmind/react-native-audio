@@ -42,11 +42,12 @@ class AudioExample extends Component {
 
         this.prepareRecordingPath(this.state.audioPath);
         console.log('hi3');
+        console.log(this.state.audioPath);
         AudioRecorder.prepareStreamingAtPath(this.state.audioPath, {
           SampleRate: 22050,
           Channels: 1,
           AudioQuality: "Low",
-          AudioEncoding: "aac",
+          AudioEncoding: "lpcm",
           AudioEncodingBitRate: 32000,
         });
         console.log('hi2');

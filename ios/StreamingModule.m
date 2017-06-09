@@ -10,32 +10,51 @@
 
 @implementation StreamingModule
 
-- (void)prepare:(NSURL *)recordingFileUrl handler:(void(^)(AVAudioPCMBuffer *))handler {
-    _completionHandler = [handler copy];
-    fileUrl = recordingFileUrl;
+- (void)prepare:(NSURL *)recordingFileUrl settings:(NSDictionary*)settings handler:(void(^)(AVAudioPCMBuffer *))handler {
+    _audioDataReceived = [handler copy];
+    _fileUrl = recordingFileUrl;
+    _settings = settings;
     
-    engine = [[AVAudioEngine alloc] init];
+    _engine = [[AVAudioEngine alloc] init];
     
-    AVAudioInputNode *input = [engine inputNode];
-    AVAudioFormat *format = [input outputFormatForBus: 0];
+    AVAudioInputNode *input = [_engine inputNode];
+    AVAudioMixerNode *mainMixer = [_engine mainMixerNode];
+    // [mainMixer setOutputVolume: 0.0];
+    AVAudioOutputNode *output = [_engine outputNode];
+    
+    NSLog(@"Prepare");
+    NSLog(@"%@", [settings description]);
+    
+    //AVAudioFormat *format = [[AVAudioFormat alloc] initWithSettings:settings]; //[input outputFormatForBus: 0]; //
+    
+    AVAudioFormat *format = [[AVAudioFormat alloc] initStandardFormatWithSampleRate:22050 channels:1];
+    
+    // AVAudioFormat *format = [mainMixer outputFormatForBus: 0];
+    NSLog(@"%@", [format description]);
+    
+    
+    [_engine connect:input to:mainMixer format:[input inputFormatForBus:0]];
+    [_engine connect:mainMixer to:output format:format];
     
     NSError *error = nil;
-    AVAudioFile *file = [[AVAudioFile alloc] initForWriting:fileUrl
+    AVAudioFile *file = [[AVAudioFile alloc] initForWriting:_fileUrl
                                                    settings:format.settings
                                                       error:&error];
     
-    [input installTapOnBus: 0 bufferSize: 8192 format: format block: ^(AVAudioPCMBuffer *buf, AVAudioTime *when) {
+    NSLog(@"InstallTapOnBus");
+    
+    [mainMixer installTapOnBus: 0 bufferSize: 8192 format: format block: ^(AVAudioPCMBuffer *buf, AVAudioTime *when) {
         // ‘buf' contains audio captured from input node at time 'when'
-        _completionHandler(buf);
+        _audioDataReceived(buf);
         NSError *wrtieFromBufferError = nil;
         [file writeFromBuffer:buf error:&wrtieFromBufferError];
     }];
 }
 
 - (void)start {
-    if (engine == nil) {
-        if (_completionHandler != nil && fileUrl != nil) {
-            [self prepare:fileUrl handler:_completionHandler];
+    if (_engine == nil) {
+        if (_audioDataReceived != nil && _fileUrl != nil && _settings != nil) {
+            [self prepare:_fileUrl settings:_settings handler:_audioDataReceived];
         } else {
             NSLog(@"Have to prepare before start");
             return;
@@ -43,21 +62,21 @@
     }
     
     NSError *error = nil;
-    if (![engine startAndReturnError:&error]) {
+    if (![_engine startAndReturnError:&error]) {
         NSLog(@"engine failed to start: %@", error);
         return;
     }
 }
 
 - (void)pause {
-    [engine pause];
+    [_engine pause];
 }
 
 - (void)stop {
-    AVAudioInputNode *input = [engine inputNode];
-    [input removeTapOnBus: 0];
-    [engine stop];
-    engine = nil;
+    AVAudioMixerNode *mainMixer = [_engine mainMixerNode];
+    [mainMixer removeTapOnBus: 0];
+    [_engine stop];
+    _engine = nil;
 }
 
 @end

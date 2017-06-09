@@ -246,8 +246,74 @@ RCT_EXPORT_METHOD(prepareStreamingAtPath:(NSString *)path sampleRate:(float)samp
     NSLog(@"prepareStreaming");
     _audioFileURL = [NSURL fileURLWithPath:path];
     
+    // Default options
+    _audioQuality = [NSNumber numberWithInt:AVAudioQualityHigh];
+    _audioEncoding = [NSNumber numberWithInt:kAudioFormatAppleIMA4];
+    _audioChannels = [NSNumber numberWithInt:2];
+    _audioSampleRate = [NSNumber numberWithFloat:44100.0];
+    _meteringEnabled = NO;
+    
+    // Set audio quality from options
+    if (quality != nil) {
+        if ([quality  isEqual: @"Low"]) {
+            _audioQuality =[NSNumber numberWithInt:AVAudioQualityLow];
+        } else if ([quality  isEqual: @"Medium"]) {
+            _audioQuality =[NSNumber numberWithInt:AVAudioQualityMedium];
+        } else if ([quality  isEqual: @"High"]) {
+            _audioQuality =[NSNumber numberWithInt:AVAudioQualityHigh];
+        }
+    }
+    
+    // Set channels from options
+    if (channels != nil) {
+        _audioChannels = channels;
+    }
+    
+    // Set audio encoding from options
+    if (encoding != nil) {
+        if ([encoding  isEqual: @"lpcm"]) {
+            _audioEncoding =[NSNumber numberWithInt:kAudioFormatLinearPCM];
+        } else if ([encoding  isEqual: @"ima4"]) {
+            _audioEncoding =[NSNumber numberWithInt:kAudioFormatAppleIMA4];
+        } else if ([encoding  isEqual: @"aac"]) {
+            _audioEncoding =[NSNumber numberWithInt:kAudioFormatMPEG4AAC];
+        } else if ([encoding  isEqual: @"MAC3"]) {
+            _audioEncoding =[NSNumber numberWithInt:kAudioFormatMACE3];
+        } else if ([encoding  isEqual: @"MAC6"]) {
+            _audioEncoding =[NSNumber numberWithInt:kAudioFormatMACE6];
+        } else if ([encoding  isEqual: @"ulaw"]) {
+            _audioEncoding =[NSNumber numberWithInt:kAudioFormatULaw];
+        } else if ([encoding  isEqual: @"alaw"]) {
+            _audioEncoding =[NSNumber numberWithInt:kAudioFormatALaw];
+        } else if ([encoding  isEqual: @"mp1"]) {
+            _audioEncoding =[NSNumber numberWithInt:kAudioFormatMPEGLayer1];
+        } else if ([encoding  isEqual: @"mp2"]) {
+            _audioEncoding =[NSNumber numberWithInt:kAudioFormatMPEGLayer2];
+        } else if ([encoding  isEqual: @"alac"]) {
+            _audioEncoding =[NSNumber numberWithInt:kAudioFormatAppleLossless];
+        } else if ([encoding  isEqual: @"amr"]) {
+            _audioEncoding =[NSNumber numberWithInt:kAudioFormatAMR];
+        }
+    }
+    
+    // Set sample rate from options
+    _audioSampleRate = [NSNumber numberWithFloat:sampleRate];
+    
+    NSDictionary *recordSettings = [NSDictionary dictionaryWithObjectsAndKeys:
+                                    //_audioQuality, AVEncoderAudioQualityKey,
+                                    //_audioEncoding, AVFormatIDKey,
+                                    _audioChannels, AVNumberOfChannelsKey,
+                                    _audioSampleRate, AVSampleRateKey,
+                                    nil];
+    
+    // Enable metering from options
+    if (meteringEnabled != NO) {
+        _meteringEnabled = meteringEnabled;
+    }
+    
     streamingModule = [[StreamingModule alloc] init];
     [streamingModule prepare:_audioFileURL
+                    settings:recordSettings
                      handler:^(AVAudioPCMBuffer *buf){
                          NSLog(@"%@", buf);
                          NSMutableArray *body = [[NSMutableArray alloc] init];
