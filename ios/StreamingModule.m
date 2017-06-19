@@ -17,13 +17,6 @@
     
     _engine = [[AVAudioEngine alloc] init];
     
-    /*
-    // Initialize audio session
-    AVAudioSession *audioSession = [AVAudioSession sharedInstance];
-    NSError *setCateegoryError = nil;
-    [audioSession setCategory:AVAudioSessionCategoryPlayAndRecord error:&setCateegoryError];
-    */
-    
     AVAudioInputNode *input = [_engine inputNode];
     _downMixer = [[AVAudioMixerNode alloc] init];
     AVAudioMixerNode *mainMixer = [_engine mainMixerNode];
@@ -50,6 +43,7 @@
     
     [_downMixer installTapOnBus: 0 bufferSize: 8192 format: format block: ^(AVAudioPCMBuffer *buf, AVAudioTime *when) {
         // ‘buf' contains audio captured from input node at time 'when'
+        currentTime = when.sampleTime / when.sampleRate - _startTime;
         _audioDataReceived(buf);
         NSError *wrtieFromBufferError = nil;
         [file writeFromBuffer:buf error:&wrtieFromBufferError];
@@ -70,19 +64,25 @@
     
     NSError *error = nil;
     if (![_engine startAndReturnError:&error]) {
+        
         NSLog(@"engine failed to start: %@", error);
         return;
+    } else {
+        _startTime = _downMixer.lastRenderTime.sampleTime / _downMixer.lastRenderTime.sampleRate;
+        recording = true;
     }
 }
 
 - (void)pause {
     [_engine pause];
+    recording = false;
 }
 
 - (void)stop {
     [_downMixer removeTapOnBus: 0];
     [_engine stop];
     _engine = nil;
+    recording = false;
 }
 
 @end

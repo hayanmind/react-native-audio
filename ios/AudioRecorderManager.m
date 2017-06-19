@@ -20,7 +20,7 @@ NSString *const AudioRecorderEventDataReceived = @"dataReceived";
 
 @implementation AudioRecorderManager {
 
-  AVAudioRecorder *_audioRecorder;
+  // AVAudioRecorder *_audioRecorder;
 
   NSTimeInterval _currentTime;
   id _progressUpdateTimer;
@@ -42,8 +42,8 @@ StreamingModule* streamingModule;
 RCT_EXPORT_MODULE();
 
 - (void)sendProgressUpdate {
-  if (_audioRecorder && _audioRecorder.recording) {
-    _currentTime = _audioRecorder.currentTime;
+  if (streamingModule && streamingModule->recording) {
+    _currentTime = streamingModule->currentTime;
   } else {
     return;
   }
@@ -52,11 +52,13 @@ RCT_EXPORT_MODULE();
    (([_prevProgressUpdateTime timeIntervalSinceNow] * -1000.0) >= _progressUpdateInterval)) {
       NSMutableDictionary *body = [[NSMutableDictionary alloc] init];
       [body setObject:[NSNumber numberWithFloat:_currentTime] forKey:@"currentTime"];
+      /*
       if (_meteringEnabled) {
           [_audioRecorder updateMeters];
           float _currentMetering = [_audioRecorder averagePowerForChannel: 0];
           [body setObject:[NSNumber numberWithFloat:_currentMetering] forKey:@"currentMetering"];
       }
+       */
 
       [self.bridge.eventDispatcher sendAppEventWithName:AudioRecorderEventProgress body:body];
 
@@ -78,12 +80,21 @@ RCT_EXPORT_MODULE();
   [_progressUpdateTimer addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
 }
 
+- (void)finishRecording:(BOOL)flag {
+    [self.bridge.eventDispatcher sendAppEventWithName:AudioRecorderEventFinished body:@{
+        @"status": flag ? @"OK" : @"ERROR",
+        @"audioFileURL": [_audioFileURL absoluteString]
+    }];
+}
+
+/*
 - (void)audioRecorderDidFinishRecording:(AVAudioRecorder *)recorder successfully:(BOOL)flag {
   [self.bridge.eventDispatcher sendAppEventWithName:AudioRecorderEventFinished body:@{
       @"status": flag ? @"OK" : @"ERROR",
       @"audioFileURL": [_audioFileURL absoluteString]
     }];
 }
+ */
 
 - (NSString *) applicationDocumentsDirectory
 {
@@ -92,6 +103,7 @@ RCT_EXPORT_MODULE();
   return basePath;
 }
 
+/*
 RCT_EXPORT_METHOD(prepareRecordingAtPath:(NSString *)path sampleRate:(float)sampleRate channels:(nonnull NSNumber *)channels quality:(NSString *)quality encoding:(NSString *)encoding meteringEnabled:(BOOL)meteringEnabled)
 {
   _prevProgressUpdateTime = nil;
@@ -209,6 +221,7 @@ RCT_EXPORT_METHOD(pauseRecording)
     [_audioRecorder pause];
   }
 }
+*/
 
 RCT_EXPORT_METHOD(checkAuthorizationStatus:(RCTPromiseResolveBlock)resolve reject:(__unused RCTPromiseRejectBlock)reject)
 {
@@ -332,6 +345,8 @@ RCT_EXPORT_METHOD(startStreaming)
 {
     NSLog(@"startStreaming");
     NSLog(@"%@", _audioFileURL);
+    [self startProgressTimer];
+    [_recordSession setActive:YES error:nil];
     [streamingModule start];
 }
 
@@ -339,14 +354,16 @@ RCT_EXPORT_METHOD(stopStreaming)
 {
     NSLog(@"stopStreaming");
     [streamingModule stop];
-
+    [_recordSession setActive:NO error:nil];
+    _prevProgressUpdateTime = nil;
+    [self finishRecording: true];
 }
 
 RCT_EXPORT_METHOD(pauseStreaming)
 {
     NSLog(@"pauseStreaming");
+    [self stopProgressTimer];
     [streamingModule pause];
-    
 }
 
 

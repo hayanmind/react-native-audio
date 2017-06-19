@@ -67,66 +67,14 @@ var AudioRecorder = {
       return AudioRecorderManager.prepareStreamingAtPath(path, recordingOptions);
     }
   },
-  prepareRecordingAtPath: function(path, options) {
-    if (this.progressSubscription) this.progressSubscription.remove();
-    this.progressSubscription = NativeAppEventEmitter.addListener('recordingProgress',
-      (data) => {
-        if (this.onProgress) {
-          this.onProgress(data);
-        }
-      }
-    );
-
-    if (this.finishedSubscription) this.finishedSubscription.remove();
-    this.finishedSubscription = NativeAppEventEmitter.addListener('recordingFinished',
-      (data) => {
-        if (this.onFinished) {
-          this.onFinished(data);
-        }
-      }
-    );
-
-    var defaultOptions = {
-      SampleRate: 44100.0,
-      Channels: 2,
-      AudioQuality: 'High',
-      AudioEncoding: 'ima4',
-      OutputFormat: 'mpeg_4',
-      MeteringEnabled: false,
-      AudioEncodingBitRate: 32000
-    };
-
-    var recordingOptions = {...defaultOptions, ...options};
-
-    if (Platform.OS === 'ios') {
-      AudioRecorderManager.prepareRecordingAtPath(
-        path,
-        recordingOptions.SampleRate,
-        recordingOptions.Channels,
-        recordingOptions.AudioQuality,
-        recordingOptions.AudioEncoding,
-        recordingOptions.MeteringEnabled
-      );
-    } else {
-      return AudioRecorderManager.prepareRecordingAtPath(path, recordingOptions);
-    }
-  },
-  startRecording: function() {
-    return AudioRecorderManager.startRecording();
-  },
-  pauseRecording: function() {
-    return AudioRecorderManager.pauseRecording();
-  },
-  stopRecording: function() {
-    return AudioRecorderManager.stopRecording();
-  },
   startStreaming: function() {
-    console.log(AudioRecorderManager);
-    console.log('???');
     return AudioRecorderManager.startStreaming();
   },
   stopStreaming: function() {
     return AudioRecorderManager.stopStreaming();
+  },
+  pauseStreaming: function() {
+    return AudioRecorderManager.pauseStreaming();
   },
   checkAuthorizationStatus: AudioRecorderManager.checkAuthorizationStatus,
   requestAuthorization: AudioRecorderManager.requestAuthorization,

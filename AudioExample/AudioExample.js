@@ -25,13 +25,14 @@ class AudioExample extends Component {
     };
 
     prepareRecordingPath(audioPath){
-      AudioRecorder.prepareRecordingAtPath(audioPath, {
-        SampleRate: 22050,
-        Channels: 1,
-        AudioQuality: "Low",
-        AudioEncoding: "aac",
-        AudioEncodingBitRate: 32000
-      });
+      AudioRecorder.prepareStreamingAtPath(this.state.audioPath, {
+          SampleRate: 22050,
+          Channels: 2,
+          // Following is only supported in Android
+          AudioQuality: "Low",
+          AudioEncoding: "aac",
+          AudioEncodingBitRate: 32000,
+        });
     }
 
     componentDidMount() {
@@ -41,16 +42,7 @@ class AudioExample extends Component {
         if (!hasPermission) return;
 
         this.prepareRecordingPath(this.state.audioPath);
-        console.log('hi3');
         console.log(this.state.audioPath);
-        AudioRecorder.prepareStreamingAtPath(this.state.audioPath, {
-          SampleRate: 22050,
-          Channels: 2,
-          AudioQuality: "Low",
-          AudioEncoding: "lpcm",
-          AudioEncodingBitRate: 32000,
-        });
-        console.log('hi2');
         console.log(AudioRecorder);
         AudioRecorder.onProgress = (data) => {
           this.setState({currentTime: Math.floor(data.currentTime)});
@@ -107,7 +99,7 @@ class AudioExample extends Component {
       this.setState({stoppedRecording: true, recording: false});
 
       try {
-        const filePath = await AudioRecorder.pauseRecording();
+        const filePath = await AudioRecorder.pauseStreaming();
 
         // Pause is currently equivalent to stop on Android.
         if (Platform.OS === 'android') {

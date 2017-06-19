@@ -12,10 +12,14 @@
 {
     AVAudioEngine *_engine;
     void (^_audioDataReceived)(AVAudioPCMBuffer *buf);
-    NSTimeInterval _currentTime;
     NSURL *_fileUrl;
     NSDictionary *_settings;
     AVAudioMixerNode *_downMixer;
+    NSTimeInterval _startTime;
+    
+    @public
+    bool recording;
+    NSTimeInterval currentTime;
 }
 
 - (void)prepare:(NSURL*)recordingFileUrl settings:(NSDictionary*)settings handler:(void(^)(AVAudioPCMBuffer *))handler;
