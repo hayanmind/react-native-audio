@@ -15,6 +15,7 @@
     NSTimeInterval _currentTime;
     NSURL *_fileUrl;
     NSDictionary *_settings;
+    AVAudioMixerNode *_downMixer;
 }
 
 - (void)prepare:(NSURL*)recordingFileUrl settings:(NSDictionary*)settings handler:(void(^)(AVAudioPCMBuffer *))handler;

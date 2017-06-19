@@ -45,7 +45,7 @@ class AudioExample extends Component {
         console.log(this.state.audioPath);
         AudioRecorder.prepareStreamingAtPath(this.state.audioPath, {
           SampleRate: 22050,
-          Channels: 1,
+          Channels: 2,
           AudioQuality: "Low",
           AudioEncoding: "lpcm",
           AudioEncodingBitRate: 32000,

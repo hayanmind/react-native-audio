@@ -17,25 +17,30 @@
     
     _engine = [[AVAudioEngine alloc] init];
     
+    /*
+    // Initialize audio session
+    AVAudioSession *audioSession = [AVAudioSession sharedInstance];
+    NSError *setCateegoryError = nil;
+    [audioSession setCategory:AVAudioSessionCategoryPlayAndRecord error:&setCateegoryError];
+    */
+    
     AVAudioInputNode *input = [_engine inputNode];
+    _downMixer = [[AVAudioMixerNode alloc] init];
     AVAudioMixerNode *mainMixer = [_engine mainMixerNode];
-    // [mainMixer setOutputVolume: 0.0];
-    AVAudioOutputNode *output = [_engine outputNode];
     
     NSLog(@"Prepare");
     NSLog(@"%@", [settings description]);
     
-    //AVAudioFormat *format = [[AVAudioFormat alloc] initWithSettings:settings]; //[input outputFormatForBus: 0]; //
+    AVAudioFormat *format = [[AVAudioFormat alloc] initStandardFormatWithSampleRate: [_settings[AVSampleRateKey] doubleValue]
+                                                                           channels: [_settings[AVNumberOfChannelsKey] intValue]];
     
-    AVAudioFormat *format = [[AVAudioFormat alloc] initStandardFormatWithSampleRate:22050 channels:1];
-    
-    // AVAudioFormat *format = [mainMixer outputFormatForBus: 0];
     NSLog(@"%@", [format description]);
     
-    
-    [_engine connect:input to:mainMixer format:[input inputFormatForBus:0]];
-    [_engine connect:mainMixer to:output format:format];
-    
+    [_engine attachNode:_downMixer];
+    [_engine connect:input to:_downMixer format:[input inputFormatForBus:0]];
+    [_downMixer setVolume:0];
+    [_engine connect:_downMixer to:mainMixer format:format];
+
     NSError *error = nil;
     AVAudioFile *file = [[AVAudioFile alloc] initForWriting:_fileUrl
                                                    settings:format.settings
@@ -43,12 +48,14 @@
     
     NSLog(@"InstallTapOnBus");
     
-    [mainMixer installTapOnBus: 0 bufferSize: 8192 format: format block: ^(AVAudioPCMBuffer *buf, AVAudioTime *when) {
+    [_downMixer installTapOnBus: 0 bufferSize: 8192 format: format block: ^(AVAudioPCMBuffer *buf, AVAudioTime *when) {
         // ‘buf' contains audio captured from input node at time 'when'
         _audioDataReceived(buf);
         NSError *wrtieFromBufferError = nil;
         [file writeFromBuffer:buf error:&wrtieFromBufferError];
     }];
+    
+    [_engine prepare];
 }
 
 - (void)start {
@@ -73,8 +80,7 @@
 }
 
 - (void)stop {
-    AVAudioMixerNode *mainMixer = [_engine mainMixerNode];
-    [mainMixer removeTapOnBus: 0];
+    [_downMixer removeTapOnBus: 0];
     [_engine stop];
     _engine = nil;
 }
