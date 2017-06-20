@@ -25,6 +25,7 @@ var AudioRecorder = {
     if (this.finishedSubscription) this.finishedSubscription.remove();
     this.finishedSubscription = NativeAppEventEmitter.addListener('recordingFinished',
       (data) => {
+        console.log('recordingFinished()');
         if (this.onFinished) {
           this.onFinished(data);
         }

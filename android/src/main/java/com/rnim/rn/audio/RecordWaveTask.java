@@ -24,14 +24,11 @@ import java.util.Locale;
 
 public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
 
-    // Configure me!
-    private static final int AUDIO_SOURCE = MediaRecorder.AudioSource.MIC;
-    private static final int SAMPLE_RATE = 44100; // Hz
-    private static final int ENCODING = AudioFormat.ENCODING_PCM_16BIT;
-    private static final int CHANNEL_MASK = AudioFormat.CHANNEL_IN_MONO;
-    //
-
-    private static final int BUFFER_SIZE = 2 * AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_MASK, ENCODING);
+    // Default value
+    private int AUDIO_SOURCE = MediaRecorder.AudioSource.MIC;
+    private int SAMPLE_RATE = 44100; // Hz
+    private int ENCODING = AudioFormat.ENCODING_PCM_16BIT;
+    private int CHANNEL_MASK = AudioFormat.CHANNEL_IN_MONO;
 
     private Context ctx;
     private File outputFile;
@@ -43,6 +40,14 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
     public void setContext(Context ctx) {
         this.ctx = ctx;
     }
+
+    public void setAudioSource(int audioSource) { this.AUDIO_SOURCE = audioSource; }
+
+    public void setSampleRate(int sampleRate) { this.SAMPLE_RATE = sampleRate; }
+
+    public void setEncoding(int encoding) { this.ENCODING = encoding; }
+
+    public void setChannelMask(int channelMask) { this.CHANNEL_MASK = channelMask; }
 
     public void setOutputFile(File file) { this.outputFile = file; }
 
@@ -70,11 +75,11 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
      * AudioRecord until it reaches 4GB or is stopped by the user. It then goes back and updates
      * the WAV header to include the proper final chunk sizes.
      *
-     * @param files Index 0 should be the file to write to
      * @return Either an Exception (error) or two longs, the filesize, elapsed time in ms (success)
      */
     @Override
-    protected Object[] doInBackground(File... files) {
+    protected Object[] doInBackground(File... unused) {
+        int BUFFER_SIZE = 2 * AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_MASK, ENCODING);
         AudioRecord audioRecord = null;
         FileOutputStream wavOut = null;
         long startTime = 0;
@@ -125,10 +130,12 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
         } catch (IOException ex) {
             return new Object[]{ex};
         } finally {
+            Log.d("RecordWaveTask", "Finally");
             if (audioRecord != null) {
                 try {
                     if (audioRecord.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING) {
                         audioRecord.stop();
+                        Log.d("RecordWaveTask", "audioRecord.stop()");
                         endTime = SystemClock.elapsedRealtime();
                     }
                 } catch (IllegalStateException ex) {
@@ -141,8 +148,9 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
             if (wavOut != null) {
                 try {
                     wavOut.close();
+                    Log.d("RecordWaveTask", "wavOut.close()");
                 } catch (IOException ex) {
-                    //
+                    Log.d("RecordWaveTask", ex.getMessage());
                 }
             }
         }
@@ -150,12 +158,20 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
         try {
             // This is not put in the try/catch/finally above since it needs to run
             // after we close the FileOutputStream
-            updateWavHeader(files[0]);
+            Log.d("RecordWaveTask", "updateWavHeaderPrev");
+            this.updateWavHeader(this.outputFile);
+            Log.d("RecordWaveTask", "updateWavHeaderAfter");
         } catch (IOException ex) {
+            Log.d("RecordWaveTask", "???");
+            Log.d("RecordWaveTask", ex.getMessage());
             return new Object[] { ex };
         }
 
-        return new Object[] { files[0].length(), endTime - startTime };
+        Log.d("RecordWaveTask", "Bye");
+        Log.d("RecordWaveTask", (endTime - startTime) + "" );
+        Log.d("RecordWaveTask", this.outputFile.length() + "" );
+
+        return new Object[] { this.outputFile.length(), endTime - startTime };
     }
 
     /**
@@ -249,6 +265,7 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
      * @throws IOException
      */
     private static void updateWavHeader(File wav) throws IOException {
+        Log.d("RecordWaveTask", "updateWavHeader0");
         byte[] sizes = ByteBuffer
                 .allocate(8)
                 .order(ByteOrder.LITTLE_ENDIAN)
@@ -258,7 +275,7 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
                 .putInt((int) (wav.length() - 8)) // ChunkSize
                 .putInt((int) (wav.length() - 44)) // Subchunk2Size
                 .array();
-
+        Log.d("RecordWaveTask", "updateWavHeader1");
         RandomAccessFile accessWave = null;
         //noinspection CaughtExceptionImmediatelyRethrown
         try {
@@ -267,9 +284,13 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
             accessWave.seek(4);
             accessWave.write(sizes, 0, 4);
 
+            Log.d("RecordWaveTask", "updateWavHeader2");
+
             // Subchunk2Size
             accessWave.seek(40);
             accessWave.write(sizes, 4, 4);
+
+            Log.d("RecordWaveTask", "updateWavHeader3");
         } catch (IOException ex) {
             // Rethrow but we still close accessWave in our finally
             throw ex;
@@ -287,11 +308,13 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
     @Override
     protected void onCancelled(Object[] results) {
         // Handling cancellations and successful runs in the same way
+        Log.d("RecordWaveTask", "onCancelled");
         onPostExecute(results);
     }
 
     @Override
     protected void onPostExecute(Object[] results) {
+        Log.d("RecordWaveTask", "onPostExecute");
         Throwable throwable = null;
         if (results[0] instanceof Throwable) {
             // Error
@@ -305,11 +328,11 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
                 // Display final recording stats
                 double size = (long) results[0] / 1000000.00;
                 long time = (long) results[1] / 1000;
-                // Toast.makeText(ctx, String.format(Locale.getDefault(), "%.2f MB / %d seconds",
-                //        size, time), Toast.LENGTH_LONG).show();
+                Toast.makeText(ctx, String.format(Locale.getDefault(), "%.2f MB / %d seconds",
+                      size, time), Toast.LENGTH_LONG).show();
             } else {
                 // Error
-                // Toast.makeText(ctx, throwable.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                Toast.makeText(ctx, throwable.getLocalizedMessage(), Toast.LENGTH_LONG).show();
             }
         }
 

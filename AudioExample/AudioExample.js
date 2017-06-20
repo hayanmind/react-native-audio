@@ -20,18 +20,18 @@ class AudioExample extends Component {
       recording: false,
       stoppedRecording: false,
       finished: false,
-      audioPath: AudioUtils.DocumentDirectoryPath + '/test.wav',
+      audioPath: AudioUtils.DownloadsDirectoryPath + '/test.wav',
       hasPermission: undefined,
     };
 
     prepareRecordingPath(audioPath){
       AudioRecorder.prepareStreamingAtPath(this.state.audioPath, {
           SampleRate: 22050,
-          Channels: 2,
-          // Following is only supported in Android
-          AudioQuality: "Low",
-          AudioEncoding: "aac",
-          AudioEncodingBitRate: 32000,
+          Channels: 1,
+          // Following is not supported
+          // AudioQuality: "Low",
+          // AudioEncoding: "aac",
+          // AudioEncodingBitRate: 32000,
         });
     }
 

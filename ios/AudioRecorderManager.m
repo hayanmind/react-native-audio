@@ -262,7 +262,7 @@ RCT_EXPORT_METHOD(prepareStreamingAtPath:(NSString *)path sampleRate:(float)samp
     // Default options
     _audioQuality = [NSNumber numberWithInt:AVAudioQualityHigh];
     _audioEncoding = [NSNumber numberWithInt:kAudioFormatAppleIMA4];
-    _audioChannels = [NSNumber numberWithInt:2];
+    _audioChannels = [NSNumber numberWithInt:1];
     _audioSampleRate = [NSNumber numberWithFloat:44100.0];
     _meteringEnabled = NO;
     

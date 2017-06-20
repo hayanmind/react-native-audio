@@ -171,21 +171,52 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void prepareStreamingAtPath(String recordingPath, ReadableMap recordingSettings, Promise promise) {
-    File wavFile = new File(recordingPath);
-    recordTask = new RecordWaveTask(context);
-    recordTask.setOutputFile(wavFile);
-    recordTask.setStreamListener(new RecordWaveTask.OnStreamListener() {
 
-      @Override
-      public void onDataReceived(byte[] buffer) {
-        Log.d("onDataReceived", buffer.length + "");
-        WritableArray body = Arguments.createArray();
-        for (byte value: buffer) {
-          body.pushInt((int) value);
-        }
-        sendEvent("dataReceived", body);
+    try {
+      File wavFile = new File(recordingPath);
+      recordTask = new RecordWaveTask(context);
+
+      recordTask.setAudioSource(MediaRecorder.AudioSource.MIC);
+
+      if (recordingSettings.hasKey("SampleRate")) {
+        recordTask.setSampleRate(recordingSettings.getInt("SampleRate"));
       }
-    });
+
+      if (recordingSettings.hasKey("Channels")) {
+        int channels = recordingSettings.getInt("Channels");
+        int channelMask = AudioFormat.CHANNEL_IN_STEREO;
+        if (channels == 1) {
+          channelMask = AudioFormat.CHANNEL_IN_MONO;
+        }
+        recordTask.setChannelMask(channelMask);
+      }
+
+      recordTask.setOutputFile(wavFile);
+      recordTask.setStreamListener(new RecordWaveTask.OnStreamListener() {
+
+        @Override
+        public void onDataReceived(byte[] buffer) {
+          Log.d("onDataReceived", buffer.length + "");
+          WritableArray body = Arguments.createArray();
+          for (byte value: buffer) {
+            body.pushInt((int) value);
+          }
+          sendEvent("dataReceived", body);
+        }
+      });
+
+      // int outputFormat = getOutputFormatFromString(recordingSettings.getString("OutputFormat"));
+      // recorder.setOutputFormat(outputFormat);
+      // int audioEncoder = getAudioEncoderFromString(recordingSettings.getString("AudioEncoding"));
+      // recorder.setAudioEncoder(audioEncoder);
+      // recorder.setAudioEncodingBitRate(recordingSettings.getInt("AudioEncodingBitRate"));
+      // recorder.setOutputFile(recordingPath);
+    }
+    catch(final Exception e) {
+      logAndRejectPromise(promise, "COULDNT_CONFIGURE_MEDIA_RECORDER" , "Make sure you've added RECORD_AUDIO permission to your AndroidManifest.xml file "+e.getMessage());
+      return;
+    }
+
     currentOutputFile = recordingPath;
   }
 
@@ -218,11 +249,14 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void stopStreaming(final Promise promise){
+    Log.d("RecordWaveTask", "stopStreaming");
     if (!recordTask.isCancelled() && recordTask.getStatus() == AsyncTask.Status.RUNNING) {
+      Log.d("RecordWaveTask", "stopStreaming2");
       isRecording = false;
       recordTask.setCancelCompleteListener(new RecordWaveTask.OnCancelCompleteListener() {
         @Override
         public void onCancelCompleted() {
+          Log.d("RecordWaveTask", "onCancelCompleted");
           recordTask = null;
           promise.resolve(currentOutputFile);
           sendEvent("recordingFinished", null);
@@ -231,6 +265,7 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
       recordTask.cancel(false);
       stopTimer();
     } else {
+      Log.d("RecordWaveTask", "Task not running.");
       // Toast.makeText(context, "Task not running.", Toast.LENGTH_SHORT).show();
       logAndRejectPromise(promise, "INVALID_STATE", "Please call startStreaming before stopping streaming");
     }
