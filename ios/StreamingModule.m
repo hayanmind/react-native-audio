@@ -24,8 +24,19 @@
     NSLog(@"Prepare");
     NSLog(@"%@", [settings description]);
     
-    AVAudioFormat *format = [[AVAudioFormat alloc] initStandardFormatWithSampleRate: [_settings[AVSampleRateKey] doubleValue]
-                                                                           channels: [_settings[AVNumberOfChannelsKey] intValue]];
+    
+    AVAudioFormat *format =
+        [[AVAudioFormat alloc] initWithCommonFormat: AVAudioPCMFormatFloat32
+                                         sampleRate: [_settings[AVSampleRateKey] doubleValue]
+                                           channels: [_settings[AVNumberOfChannelsKey] intValue]
+                                        interleaved: NO
+        ];
+    
+    /*
+    AVAudioFormat *format =
+        [[AVAudioFormat alloc] initStandardFormatWithSampleRate: [_settings[AVSampleRateKey] doubleValue]
+                                                       channels: [_settings[AVNumberOfChannelsKey] intValue]];
+    */
     
     NSLog(@"%@", [format description]);
     

@@ -117,8 +117,10 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
                         this.streamListener.onDataReceived(tmpBuffer);
                     }
                     run = false;
-                } else {
+                } else if (read >= 0) {
                     // Write out the entire read buffer
+                    Log.d("RecordWaveTask", read + "");
+                    Log.d("RecordWaveTask", buffer.length + "");
                     wavOut.write(buffer, 0, read);
                     total += read;
                     if (this.streamListener != null) {

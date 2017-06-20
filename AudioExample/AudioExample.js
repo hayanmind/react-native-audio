@@ -20,7 +20,7 @@ class AudioExample extends Component {
       recording: false,
       stoppedRecording: false,
       finished: false,
-      audioPath: AudioUtils.DownloadsDirectoryPath + '/test.wav',
+      audioPath: AudioUtils.DocumentDirectoryPath + '/test.wav',
       hasPermission: undefined,
     };
 
