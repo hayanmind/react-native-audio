@@ -32,6 +32,14 @@
                                         interleaved: NO
         ];
     
+    AVAudioFormat *pcmInt16Format =
+        [[AVAudioFormat alloc] initWithCommonFormat: AVAudioPCMFormatInt16
+                                     sampleRate: [_settings[AVSampleRateKey] doubleValue]
+                                       channels: [_settings[AVNumberOfChannelsKey] intValue]
+                                    interleaved: NO
+        ];
+
+    
     /*
     AVAudioFormat *format =
         [[AVAudioFormat alloc] initStandardFormatWithSampleRate: [_settings[AVSampleRateKey] doubleValue]
@@ -46,8 +54,15 @@
     [_engine connect:_downMixer to:mainMixer format:format];
 
     NSError *error = nil;
+    /*
     AVAudioFile *file = [[AVAudioFile alloc] initForWriting:_fileUrl
-                                                   settings:format.settings
+                                                   settings:pcmInt16Format.settings
+                                                      error:&error];
+    */
+    AVAudioFile *file = [[AVAudioFile alloc] initForWriting:_fileUrl
+                                                   settings:pcmInt16Format.settings
+                                               commonFormat:AVAudioPCMFormatInt16
+                                                interleaved:NO
                                                       error:&error];
     
     NSLog(@"InstallTapOnBus");
@@ -55,9 +70,35 @@
     [_downMixer installTapOnBus: 0 bufferSize: 8192 format: format block: ^(AVAudioPCMBuffer *buf, AVAudioTime *when) {
         // ‘buf' contains audio captured from input node at time 'when'
         currentTime = when.sampleTime / when.sampleRate - _startTime;
-        _audioDataReceived(buf);
+        
+        // convert AVAudioPCMFormatFloat32 to AVAudioPCMFormatInt16
+        AVAudioPCMBuffer *pcmInt16Buffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat:pcmInt16Format
+                                                                        frameCapacity:[buf frameCapacity]];
+        
+        [pcmInt16Buffer setFrameLength: [buf frameLength]];
+        
+        int16_t * const int16Left = [pcmInt16Buffer int16ChannelData][0];
+        float * const float32Left = [buf floatChannelData][0];
+        
+        for(int i=0; i<buf.frameLength; i++) {
+            float floatValue = float32Left[i];
+            int16_t int16Value = (int16_t) (floatValue * 32768.0);
+            // NSLog(@"%f-%hd", (floatValue * 32768.0), int16Value);
+            int16Left[i] = int16Value;
+        }
+        
+        NSLog(@"audioBufferList1: %d", [buf audioBufferList]->mNumberBuffers);
+        NSLog(@"audioBufferList2: %d", [pcmInt16Buffer audioBufferList]->mNumberBuffers);
+        
+        NSLog(@"audioBufferList1: %d", [buf audioBufferList]->mBuffers->mDataByteSize);
+        NSLog(@"audioBufferList2: %d", [pcmInt16Buffer audioBufferList]->mBuffers->mDataByteSize);
+        
+        // _audioDataReceived(pcmInt16Buffer);
         NSError *wrtieFromBufferError = nil;
-        [file writeFromBuffer:buf error:&wrtieFromBufferError];
+        [file writeFromBuffer:pcmInt16Buffer error:&wrtieFromBufferError];
+        if (wrtieFromBufferError != nil) {
+            NSLog(@"%@", wrtieFromBufferError);
+        }
     }];
     
     [_engine prepare];

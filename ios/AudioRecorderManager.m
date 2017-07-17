@@ -330,9 +330,9 @@ RCT_EXPORT_METHOD(prepareStreamingAtPath:(NSString *)path sampleRate:(float)samp
                      handler:^(AVAudioPCMBuffer *buf){
                          NSLog(@"%@", buf);
                          NSMutableArray *body = [[NSMutableArray alloc] init];
-                         float * const left = [buf floatChannelData][0];
+                         int16_t * const left = [buf int16ChannelData][0];
                          for(int i=0; i<buf.frameLength; i++) {
-                             NSNumber *value = [NSNumber numberWithFloat:left[i]];
+                             NSNumber *value = [NSNumber numberWithInt:left[i]];
                              [body addObject: value];
                          }
                          NSLog(@"%@", body);
