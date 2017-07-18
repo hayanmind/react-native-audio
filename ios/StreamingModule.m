@@ -93,7 +93,8 @@
         NSLog(@"audioBufferList1: %d", [buf audioBufferList]->mBuffers->mDataByteSize);
         NSLog(@"audioBufferList2: %d", [pcmInt16Buffer audioBufferList]->mBuffers->mDataByteSize);
         
-        // _audioDataReceived(pcmInt16Buffer);
+        _audioDataReceived(pcmInt16Buffer);
+        
         NSError *wrtieFromBufferError = nil;
         [file writeFromBuffer:pcmInt16Buffer error:&wrtieFromBufferError];
         if (wrtieFromBufferError != nil) {
