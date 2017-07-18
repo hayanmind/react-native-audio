@@ -1,13 +1,11 @@
 package com.rnim.rn.audio;
 
-import android.content.Context;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.AsyncTask;
 import android.os.SystemClock;
 import android.util.Log;
-import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -16,7 +14,6 @@ import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.Locale;
 
 /**
  * Created by KDH on 2017. 5. 15..
@@ -30,17 +27,9 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
     private int ENCODING = AudioFormat.ENCODING_PCM_16BIT;
     private int CHANNEL_MASK = AudioFormat.CHANNEL_IN_MONO;
 
-    private Context ctx;
     private File outputFile;
 
-    public RecordWaveTask(Context ctx) {
-        setContext(ctx);
-    }
-
-    public void setContext(Context ctx) {
-        this.ctx = ctx;
-    }
-
+    public RecordWaveTask() {}
     public void setAudioSource(int audioSource) { this.AUDIO_SOURCE = audioSource; }
 
     public void setSampleRate(int sampleRate) { this.SAMPLE_RATE = sampleRate; }
@@ -119,8 +108,6 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
                     run = false;
                 } else if (read >= 0) {
                     // Write out the entire read buffer
-                    Log.d("RecordWaveTask", read + "");
-                    Log.d("RecordWaveTask", buffer.length + "");
                     wavOut.write(buffer, 0, read);
                     total += read;
                     if (this.streamListener != null) {
@@ -160,18 +147,14 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
         try {
             // This is not put in the try/catch/finally above since it needs to run
             // after we close the FileOutputStream
-            Log.d("RecordWaveTask", "updateWavHeaderPrev");
             this.updateWavHeader(this.outputFile);
-            Log.d("RecordWaveTask", "updateWavHeaderAfter");
         } catch (IOException ex) {
-            Log.d("RecordWaveTask", "???");
             Log.d("RecordWaveTask", ex.getMessage());
             return new Object[] { ex };
         }
 
-        Log.d("RecordWaveTask", "Bye");
-        Log.d("RecordWaveTask", (endTime - startTime) + "" );
-        Log.d("RecordWaveTask", this.outputFile.length() + "" );
+        Log.d("RecordWaveTask", (endTime - startTime) + " sec" );
+        Log.d("RecordWaveTask", this.outputFile.length() + " byte" );
 
         return new Object[] { this.outputFile.length(), endTime - startTime };
     }
@@ -267,7 +250,6 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
      * @throws IOException
      */
     private static void updateWavHeader(File wav) throws IOException {
-        Log.d("RecordWaveTask", "updateWavHeader0");
         byte[] sizes = ByteBuffer
                 .allocate(8)
                 .order(ByteOrder.LITTLE_ENDIAN)
@@ -277,7 +259,7 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
                 .putInt((int) (wav.length() - 8)) // ChunkSize
                 .putInt((int) (wav.length() - 44)) // Subchunk2Size
                 .array();
-        Log.d("RecordWaveTask", "updateWavHeader1");
+
         RandomAccessFile accessWave = null;
         //noinspection CaughtExceptionImmediatelyRethrown
         try {
@@ -286,13 +268,9 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
             accessWave.seek(4);
             accessWave.write(sizes, 0, 4);
 
-            Log.d("RecordWaveTask", "updateWavHeader2");
-
             // Subchunk2Size
             accessWave.seek(40);
             accessWave.write(sizes, 4, 4);
-
-            Log.d("RecordWaveTask", "updateWavHeader3");
         } catch (IOException ex) {
             // Rethrow but we still close accessWave in our finally
             throw ex;
@@ -322,20 +300,6 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
             // Error
             throwable = (Throwable) results[0];
             Log.e(RecordWaveTask.class.getSimpleName(), throwable.getMessage(), throwable);
-        }
-
-        // If we're attached to an activity
-        if (ctx != null) {
-            if (throwable == null) {
-                // Display final recording stats
-                double size = (long) results[0] / 1000000.00;
-                long time = (long) results[1] / 1000;
-                Toast.makeText(ctx, String.format(Locale.getDefault(), "%.2f MB / %d seconds",
-                      size, time), Toast.LENGTH_LONG).show();
-            } else {
-                // Error
-                Toast.makeText(ctx, throwable.getLocalizedMessage(), Toast.LENGTH_LONG).show();
-            }
         }
 
         if (cancelCompleteListener != null) {

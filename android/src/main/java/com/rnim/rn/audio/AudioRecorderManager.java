@@ -1,7 +1,6 @@
 package com.rnim.rn.audio;
 
 import android.Manifest;
-import android.content.Context;
 
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
@@ -14,7 +13,6 @@ import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Timer;
@@ -22,19 +20,13 @@ import java.util.TimerTask;
 
 import android.content.pm.PackageManager;
 import android.media.AudioFormat;
-import android.media.AudioRecord;
 import android.os.AsyncTask;
 import android.os.Environment;
 import android.media.MediaRecorder;
-import android.media.AudioManager;
-import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.facebook.react.modules.core.DeviceEventManagerModule;
-
-import java.io.FileInputStream;
 
 class AudioRecorderManager extends ReactContextBaseJavaModule {
 
@@ -48,8 +40,6 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
   private static final String MusicDirectoryPath = "MusicDirectoryPath";
   private static final String DownloadsDirectoryPath = "DownloadsDirectoryPath";
 
-  private Context context;
-  private MediaRecorder recorder;
   private String currentOutputFile;
   private boolean isRecording = false;
   private Timer timer;
@@ -58,14 +48,10 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
   // For AudioRecord Class
   private RecordWaveTask recordTask = null;
 
-
   public AudioRecorderManager(ReactApplicationContext reactContext) {
     super(reactContext);
-    this.context = reactContext;
     if (recordTask == null) {
-      recordTask = new RecordWaveTask(context);
-    } else {
-      recordTask.setContext(context);
+      recordTask = new RecordWaveTask();
     }
   }
 
@@ -95,57 +81,24 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
     promise.resolve(permissionGranted);
   }
 
-  @ReactMethod
-  public void prepareRecordingAtPath(String recordingPath, ReadableMap recordingSettings, Promise promise) {
-    if (isRecording){
-      logAndRejectPromise(promise, "INVALID_STATE", "Please call stopRecording before starting recording");
-    }
-
-    recorder = new MediaRecorder();
-    try {
-      recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-      int outputFormat = getOutputFormatFromString(recordingSettings.getString("OutputFormat"));
-      recorder.setOutputFormat(outputFormat);
-      int audioEncoder = getAudioEncoderFromString(recordingSettings.getString("AudioEncoding"));
-      recorder.setAudioEncoder(audioEncoder);
-      recorder.setAudioSamplingRate(recordingSettings.getInt("SampleRate"));
-      recorder.setAudioChannels(recordingSettings.getInt("Channels"));
-      recorder.setAudioEncodingBitRate(recordingSettings.getInt("AudioEncodingBitRate"));
-      recorder.setOutputFile(recordingPath);
-    }
-    catch(final Exception e) {
-      logAndRejectPromise(promise, "COULDNT_CONFIGURE_MEDIA_RECORDER" , "Make sure you've added RECORD_AUDIO permission to your AndroidManifest.xml file "+e.getMessage());
-      return;
-    }
-
-    currentOutputFile = recordingPath;
-    try {
-      recorder.prepare();
-      promise.resolve(currentOutputFile);
-    } catch (final Exception e) {
-      logAndRejectPromise(promise, "COULDNT_PREPARE_RECORDING_AT_PATH "+recordingPath, e.getMessage());
-    }
-
-  }
-
   private int getAudioEncoderFromString(String audioEncoder) {
-   switch (audioEncoder) {
-     case "aac":
-       return MediaRecorder.AudioEncoder.AAC;
-     case "aac_eld":
-       return MediaRecorder.AudioEncoder.AAC_ELD;
-     case "amr_nb":
-       return MediaRecorder.AudioEncoder.AMR_NB;
-     case "amr_wb":
-       return MediaRecorder.AudioEncoder.AMR_WB;
-     case "he_aac":
-       return MediaRecorder.AudioEncoder.HE_AAC;
-     case "vorbis":
-      return MediaRecorder.AudioEncoder.VORBIS;
-     default:
-       Log.d("INVALID_AUDIO_ENCODER", "USING MediaRecorder.AudioEncoder.DEFAULT instead of "+audioEncoder+": "+MediaRecorder.AudioEncoder.DEFAULT);
-       return MediaRecorder.AudioEncoder.DEFAULT;
-   }
+    switch (audioEncoder) {
+      case "aac":
+        return MediaRecorder.AudioEncoder.AAC;
+      case "aac_eld":
+        return MediaRecorder.AudioEncoder.AAC_ELD;
+      case "amr_nb":
+        return MediaRecorder.AudioEncoder.AMR_NB;
+      case "amr_wb":
+        return MediaRecorder.AudioEncoder.AMR_WB;
+      case "he_aac":
+        return MediaRecorder.AudioEncoder.HE_AAC;
+      case "vorbis":
+        return MediaRecorder.AudioEncoder.VORBIS;
+      default:
+        Log.d("INVALID_AUDIO_ENCODER", "USING MediaRecorder.AudioEncoder.DEFAULT instead of "+audioEncoder+": "+MediaRecorder.AudioEncoder.DEFAULT);
+        return MediaRecorder.AudioEncoder.DEFAULT;
+    }
   }
 
   private int getOutputFormatFromString(String outputFormat) {
@@ -174,7 +127,7 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
 
     try {
       File wavFile = new File(recordingPath);
-      recordTask = new RecordWaveTask(context);
+      recordTask = new RecordWaveTask();
 
       recordTask.setAudioSource(MediaRecorder.AudioSource.MIC);
 
@@ -210,7 +163,6 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
       // int audioEncoder = getAudioEncoderFromString(recordingSettings.getString("AudioEncoding"));
       // recorder.setAudioEncoder(audioEncoder);
       // recorder.setAudioEncodingBitRate(recordingSettings.getInt("AudioEncodingBitRate"));
-      // recorder.setOutputFile(recordingPath);
     }
     catch(final Exception e) {
       logAndRejectPromise(promise, "COULDNT_CONFIGURE_MEDIA_RECORDER" , "Make sure you've added RECORD_AUDIO permission to your AndroidManifest.xml file "+e.getMessage());
@@ -228,16 +180,13 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
     }
     switch (recordTask.getStatus()) {
       case RUNNING:
-        // Toast.makeText(context, "Task already running...", Toast.LENGTH_SHORT).show();
         logAndRejectPromise(promise, "INVALID_STATE", "Please call stopStreaming before starting streaming");
         return;
       case FINISHED:
         logAndRejectPromise(promise, "STREAMING_NOT_PREPARED", "Please call prepareStreamingAtPath before starting streaming");
         break;
       case PENDING:
-        if (recordTask.isCancelled()) {
-          // recordTask = new RecordWaveTask(context);
-        }
+        // No Action
     }
     startTimer();
 
@@ -266,58 +215,14 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
       stopTimer();
     } else {
       Log.d("RecordWaveTask", "Task not running.");
-      // Toast.makeText(context, "Task not running.", Toast.LENGTH_SHORT).show();
       logAndRejectPromise(promise, "INVALID_STATE", "Please call startStreaming before stopping streaming");
     }
   }
 
   @ReactMethod
-  public void startRecording(Promise promise){
-    if (recorder == null){
-      logAndRejectPromise(promise, "RECORDING_NOT_PREPARED", "Please call prepareRecordingAtPath before starting recording");
-      return;
-    }
-    if (isRecording){
-      logAndRejectPromise(promise, "INVALID_STATE", "Please call stopRecording before starting recording");
-      return;
-    }
-    recorder.start();
-    isRecording = true;
-    startTimer();
-    promise.resolve(currentOutputFile);
-  }
-
-  @ReactMethod
-  public void stopRecording(Promise promise){
-    if (!isRecording){
-      logAndRejectPromise(promise, "INVALID_STATE", "Please call startRecording before stopping recording");
-      return;
-    }
-
-    stopTimer();
-    isRecording = false;
-
-    try {
-      recorder.stop();
-      recorder.release();
-    }
-    catch (final RuntimeException e) {
-      // https://developer.android.com/reference/android/media/MediaRecorder.html#stop()
-      logAndRejectPromise(promise, "RUNTIME_EXCEPTION", "No valid audio data received. You may be using a device that can't record audio.");
-      return;
-    }
-    finally {
-      recorder = null;
-    }
-
-    promise.resolve(currentOutputFile);
-    sendEvent("recordingFinished", null);
-  }
-
-  @ReactMethod
-  public void pauseRecording(Promise promise){
+  public void pauseStreaming(Promise promise){
     // Added this function to have the same api for android and iOS, stops recording now
-    stopRecording(promise);
+    stopStreaming(promise);
   }
 
   private void startTimer(){
@@ -342,7 +247,7 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
       timer = null;
     }
   }
-  
+
   private void sendEvent(String eventName, Object params) {
     getReactApplicationContext()
             .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
