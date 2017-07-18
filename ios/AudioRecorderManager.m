@@ -33,6 +33,7 @@ NSString *const AudioRecorderEventDataReceived = @"dataReceived";
   NSNumber *_audioSampleRate;
   AVAudioSession *_recordSession;
   BOOL _meteringEnabled;
+  int _bufferSize;
 }
 
 StreamingModule* streamingModule;
@@ -125,7 +126,7 @@ RCT_EXPORT_METHOD(requestAuthorization:(RCTPromiseResolveBlock)resolve
   }];
 }
 
-RCT_EXPORT_METHOD(prepareStreamingAtPath:(NSString *)path sampleRate:(float)sampleRate channels:(nonnull NSNumber *)channels quality:(NSString *)quality encoding:(NSString *)encoding meteringEnabled:(BOOL)meteringEnabled)
+RCT_EXPORT_METHOD(prepareStreamingAtPath:(NSString *)path bufferSize:(int)bufferSize sampleRate:(float)sampleRate channels:(nonnull NSNumber *)channels quality:(NSString *)quality encoding:(NSString *)encoding meteringEnabled:(BOOL)meteringEnabled)
 {
     NSLog(@"prepareStreaming");
     _audioFileURL = [NSURL fileURLWithPath:path];
@@ -136,6 +137,7 @@ RCT_EXPORT_METHOD(prepareStreamingAtPath:(NSString *)path sampleRate:(float)samp
     _audioChannels = [NSNumber numberWithInt:1];
     _audioSampleRate = [NSNumber numberWithFloat:44100.0];
     _meteringEnabled = NO;
+    _bufferSize = 8192;
     
     // Set audio quality from options
     if (quality != nil) {
@@ -183,6 +185,9 @@ RCT_EXPORT_METHOD(prepareStreamingAtPath:(NSString *)path sampleRate:(float)samp
     // Set sample rate from options
     _audioSampleRate = [NSNumber numberWithFloat:sampleRate];
     
+    // Set buffer size from options
+    _bufferSize = bufferSize;
+    
     NSDictionary *recordSettings = [NSDictionary dictionaryWithObjectsAndKeys:
                                     //_audioQuality, AVEncoderAudioQualityKey,
                                     //_audioEncoding, AVFormatIDKey,
@@ -197,6 +202,7 @@ RCT_EXPORT_METHOD(prepareStreamingAtPath:(NSString *)path sampleRate:(float)samp
     
     streamingModule = [[StreamingModule alloc] init];
     [streamingModule prepare:_audioFileURL
+                  bufferSize:_bufferSize
                     settings:recordSettings
                      handler:^(AVAudioPCMBuffer *buf){
                          NSMutableArray *body = [[NSMutableArray alloc] init];

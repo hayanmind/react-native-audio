@@ -123,7 +123,7 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public void prepareStreamingAtPath(String recordingPath, ReadableMap recordingSettings, Promise promise) {
+  public void prepareStreamingAtPath(String recordingPath, int bufferSize, ReadableMap recordingSettings, Promise promise) {
 
     try {
       File wavFile = new File(recordingPath);
@@ -143,6 +143,8 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
         }
         recordTask.setChannelMask(channelMask);
       }
+
+      recordTask.setBufferSize(bufferSize);
 
       recordTask.setOutputFile(wavFile);
       recordTask.setStreamListener(new RecordWaveTask.OnStreamListener() {

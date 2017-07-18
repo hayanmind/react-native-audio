@@ -10,10 +10,11 @@
 
 @implementation StreamingModule
 
-- (void)prepare:(NSURL *)recordingFileUrl settings:(NSDictionary*)settings handler:(void(^)(AVAudioPCMBuffer *))handler {
+- (void)prepare:(NSURL *)recordingFileUrl bufferSize:(int)bufferSize settings:(NSDictionary*)settings handler:(void(^)(AVAudioPCMBuffer *))handler {
     _audioDataReceived = [handler copy];
     _fileUrl = recordingFileUrl;
     _settings = settings;
+    _bufferSize = bufferSize;
     
     _engine = [[AVAudioEngine alloc] init];
     
@@ -55,7 +56,7 @@
     
     NSLog(@"InstallTapOnBus");
     
-    [_downMixer installTapOnBus: 0 bufferSize: 8192 format: pcmFloat32Format block: ^(AVAudioPCMBuffer *buf, AVAudioTime *when) {
+    [_downMixer installTapOnBus: 0 bufferSize: _bufferSize format: pcmFloat32Format block: ^(AVAudioPCMBuffer *buf, AVAudioTime *when) {
         // ‘buf' contains audio captured from input node at time 'when'
         currentTime = when.sampleTime / when.sampleRate - _startTime;
         
@@ -91,7 +92,7 @@
 - (void)start {
     if (_engine == nil) {
         if (_audioDataReceived != nil && _fileUrl != nil && _settings != nil) {
-            [self prepare:_fileUrl settings:_settings handler:_audioDataReceived];
+            [self prepare:_fileUrl bufferSize:_bufferSize settings:_settings handler:_audioDataReceived];
         } else {
             NSLog(@"Have to prepare before start");
             return;

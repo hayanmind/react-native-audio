@@ -16,13 +16,14 @@
     NSDictionary *_settings;
     AVAudioMixerNode *_downMixer;
     NSTimeInterval _startTime;
+    int _bufferSize;
     
     @public
     bool recording;
     NSTimeInterval currentTime;
 }
 
-- (void)prepare:(NSURL*)recordingFileUrl settings:(NSDictionary*)settings handler:(void(^)(AVAudioPCMBuffer *))handler;
+- (void)prepare:(NSURL*)recordingFileUrl bufferSize:(int)bufferSize settings:(NSDictionary*)settings handler:(void(^)(AVAudioPCMBuffer *))handler;
 - (void)start;
 - (void)pause;
 - (void)stop;

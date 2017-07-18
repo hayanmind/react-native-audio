@@ -12,7 +12,7 @@ import ReactNative, {
 var AudioRecorderManager = NativeModules.AudioRecorderManager;
 
 var AudioRecorder = {
-  prepareStreamingAtPath: function(path, options) {
+  prepareStreamingAtPath: function(path, bufferSize=8192, options) {
     if (this.progressSubscription) this.progressSubscription.remove();
     this.progressSubscription = NativeAppEventEmitter.addListener('recordingProgress',
       (data) => {
@@ -25,7 +25,6 @@ var AudioRecorder = {
     if (this.finishedSubscription) this.finishedSubscription.remove();
     this.finishedSubscription = NativeAppEventEmitter.addListener('recordingFinished',
       (data) => {
-        console.log('recordingFinished()');
         if (this.onFinished) {
           this.onFinished(data);
         }
@@ -35,7 +34,6 @@ var AudioRecorder = {
     if (this.dataReceivedSubscription) this.dataReceivedSubscription.remove();
     this.dataReceivedSubscription = NativeAppEventEmitter.addListener('dataReceived',
       (data) => {
-        console.log(data);
         if (this.onDataReceived) {
           this.onDataReceived(data);
         }
@@ -44,28 +42,28 @@ var AudioRecorder = {
 
     var defaultOptions = {
       SampleRate: 44100.0,
-      Channels: 2,
+      Channels: 1,
       AudioQuality: 'High',
       AudioEncoding: 'ima4',
-      OutputFormat: 'mpeg_4',
       MeteringEnabled: false,
-      AudioEncodingBitRate: 32000
+      // OutputFormat: 'mpeg_4',
+      // AudioEncodingBitRate: 32000
     };
 
     var recordingOptions = {...defaultOptions, ...options};
 
     if (Platform.OS === 'ios') {
-      console.log('prepareStreamingAtPath()');
       AudioRecorderManager.prepareStreamingAtPath(
         path,
+        bufferSize,
         recordingOptions.SampleRate,
         recordingOptions.Channels,
         recordingOptions.AudioQuality,
         recordingOptions.AudioEncoding,
-        recordingOptions.MeteringEnabled
+        recordingOptions.MeteringEnabled,
       );
     } else {
-      return AudioRecorderManager.prepareStreamingAtPath(path, recordingOptions);
+      return AudioRecorderManager.prepareStreamingAtPath(path, bufferSize, recordingOptions);
     }
   },
   startStreaming: function() {

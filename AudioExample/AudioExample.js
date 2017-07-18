@@ -25,7 +25,7 @@ class AudioExample extends Component {
     };
 
     prepareRecordingPath(audioPath){
-      AudioRecorder.prepareStreamingAtPath(this.state.audioPath, {
+      AudioRecorder.prepareStreamingAtPath(this.state.audioPath, 8192, {
           SampleRate: 22050,
           Channels: 1,
           // Following is not supported

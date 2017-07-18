@@ -26,6 +26,8 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
     private int SAMPLE_RATE = 44100; // Hz
     private int ENCODING = AudioFormat.ENCODING_PCM_16BIT;
     private int CHANNEL_MASK = AudioFormat.CHANNEL_IN_MONO;
+    private int BUFFER_SIZE = 8192;
+    // int BUFFER_SIZE = 2 * AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_MASK, ENCODING);
 
     private File outputFile;
 
@@ -39,6 +41,8 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
     public void setChannelMask(int channelMask) { this.CHANNEL_MASK = channelMask; }
 
     public void setOutputFile(File file) { this.outputFile = file; }
+
+    public void setBufferSize(int bufferSize) { this.BUFFER_SIZE = bufferSize; }
 
     // Step 1 - This interface defines the type of messages I want to communicate to my owner
     public interface OnCancelCompleteListener {
@@ -68,7 +72,6 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
      */
     @Override
     protected Object[] doInBackground(File... unused) {
-        int BUFFER_SIZE = 2 * AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_MASK, ENCODING);
         AudioRecord audioRecord = null;
         FileOutputStream wavOut = null;
         long startTime = 0;
