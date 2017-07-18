@@ -25,7 +25,7 @@
     NSLog(@"%@", [settings description]);
     
     
-    AVAudioFormat *format =
+    AVAudioFormat *pcmFloat32Format =
         [[AVAudioFormat alloc] initWithCommonFormat: AVAudioPCMFormatFloat32
                                          sampleRate: [_settings[AVSampleRateKey] doubleValue]
                                            channels: [_settings[AVNumberOfChannelsKey] intValue]
@@ -39,35 +39,23 @@
                                     interleaved: NO
         ];
 
-    
-    /*
-    AVAudioFormat *format =
-        [[AVAudioFormat alloc] initStandardFormatWithSampleRate: [_settings[AVSampleRateKey] doubleValue]
-                                                       channels: [_settings[AVNumberOfChannelsKey] intValue]];
-    */
-    
-    NSLog(@"%@", [format description]);
+    NSLog(@"%@", [pcmFloat32Format description]);
     
     [_engine attachNode:_downMixer];
     [_engine connect:input to:_downMixer format:[input inputFormatForBus:0]];
     [_downMixer setVolume:0];
-    [_engine connect:_downMixer to:mainMixer format:format];
+    [_engine connect:_downMixer to:mainMixer format:pcmFloat32Format];
 
     NSError *error = nil;
-    /*
     AVAudioFile *file = [[AVAudioFile alloc] initForWriting:_fileUrl
-                                                   settings:pcmInt16Format.settings
-                                                      error:&error];
-    */
-    AVAudioFile *file = [[AVAudioFile alloc] initForWriting:_fileUrl
-                                                   settings:pcmInt16Format.settings
+                                                   settings:_settings
                                                commonFormat:AVAudioPCMFormatInt16
                                                 interleaved:NO
                                                       error:&error];
     
     NSLog(@"InstallTapOnBus");
     
-    [_downMixer installTapOnBus: 0 bufferSize: 8192 format: format block: ^(AVAudioPCMBuffer *buf, AVAudioTime *when) {
+    [_downMixer installTapOnBus: 0 bufferSize: 8192 format: pcmFloat32Format block: ^(AVAudioPCMBuffer *buf, AVAudioTime *when) {
         // ‘buf' contains audio captured from input node at time 'when'
         currentTime = when.sampleTime / when.sampleRate - _startTime;
         
@@ -77,21 +65,16 @@
         
         [pcmInt16Buffer setFrameLength: [buf frameLength]];
         
-        int16_t * const int16Left = [pcmInt16Buffer int16ChannelData][0];
-        float * const float32Left = [buf floatChannelData][0];
+        for (int channel=0; channel<pcmInt16Buffer.format.channelCount; channel++) {
+            int16_t * const int16ChannelData = [pcmInt16Buffer int16ChannelData][channel];
+            float * const float32ChannelData = [buf floatChannelData][channel];
         
-        for(int i=0; i<buf.frameLength; i++) {
-            float floatValue = float32Left[i];
-            int16_t int16Value = (int16_t) (floatValue * 32768.0);
-            // NSLog(@"%f-%hd", (floatValue * 32768.0), int16Value);
-            int16Left[i] = int16Value;
+            for(int i=0; i<buf.frameLength; i++) {
+                float floatValue = float32ChannelData[i];
+                int16_t int16Value = (int16_t) (floatValue * 32768.0);
+                int16ChannelData[i] = int16Value;
+            }
         }
-        
-        NSLog(@"audioBufferList1: %d", [buf audioBufferList]->mNumberBuffers);
-        NSLog(@"audioBufferList2: %d", [pcmInt16Buffer audioBufferList]->mNumberBuffers);
-        
-        NSLog(@"audioBufferList1: %d", [buf audioBufferList]->mBuffers->mDataByteSize);
-        NSLog(@"audioBufferList2: %d", [pcmInt16Buffer audioBufferList]->mBuffers->mDataByteSize);
         
         _audioDataReceived(pcmInt16Buffer);
         
