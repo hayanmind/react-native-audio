@@ -26,7 +26,7 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
     private int SAMPLE_RATE = 44100; // Hz
     private int ENCODING = AudioFormat.ENCODING_PCM_16BIT;
     private int CHANNEL_MASK = AudioFormat.CHANNEL_IN_MONO;
-    private int BUFFER_SIZE = 8192;
+    private int BUFFER_SIZE_IN_FRAME = 8192;
     // int BUFFER_SIZE = 2 * AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_MASK, ENCODING);
 
     private File outputFile;
@@ -42,7 +42,7 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
 
     public void setOutputFile(File file) { this.outputFile = file; }
 
-    public void setBufferSize(int bufferSize) { this.BUFFER_SIZE = bufferSize; }
+    public void setBufferSize(int bufferSizeInFrame) { this.BUFFER_SIZE_IN_FRAME = bufferSizeInFrame; }
 
     // Step 1 - This interface defines the type of messages I want to communicate to my owner
     public interface OnCancelCompleteListener {
@@ -55,7 +55,7 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
     }
 
     public interface OnStreamListener {
-        public void onDataReceived(byte[] buffer);
+        public void onDataReceived(short[] buffer);
     }
     private OnStreamListener streamListener = null;
 
@@ -74,19 +74,21 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
     protected Object[] doInBackground(File... unused) {
         AudioRecord audioRecord = null;
         FileOutputStream wavOut = null;
+
         long startTime = 0;
         long endTime = 0;
 
         try {
             // Open our two resources
-            audioRecord = new AudioRecord(AUDIO_SOURCE, SAMPLE_RATE, CHANNEL_MASK, ENCODING, BUFFER_SIZE);
+            int bufferSizeInBytes = BUFFER_SIZE_IN_FRAME * 2;
+            audioRecord = new AudioRecord(AUDIO_SOURCE, SAMPLE_RATE, CHANNEL_MASK, ENCODING, bufferSizeInBytes);
             wavOut = new FileOutputStream(this.outputFile);
 
             // Write out the wav file header
             writeWavHeader(wavOut, CHANNEL_MASK, SAMPLE_RATE, ENCODING);
 
             // Avoiding loop allocations
-            byte[] buffer = new byte[BUFFER_SIZE];
+            short[] buffer = new short[BUFFER_SIZE_IN_FRAME];
             boolean run = true;
             int read;
             long total = 0;
@@ -95,14 +97,16 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
             startTime = SystemClock.elapsedRealtime();
             audioRecord.startRecording();
             while (run && !isCancelled()) {
-                read = audioRecord.read(buffer, 0, buffer.length);
+                read = audioRecord.read(buffer, 0, buffer.length); // Count for 16 bit PCM
 
                 // WAVs cannot be > 4 GB due to the use of 32 bit unsigned integers.
                 if (total + read > 4294967295L) {
                     // Write as many bytes as we can before hitting the max size
-                    byte[] tmpBuffer = new byte[BUFFER_SIZE];
-                    for (int i = 0; i < read && total <= 4294967295L; i++, total++) {
-                        wavOut.write(buffer[i]);
+                    short[] tmpBuffer = new short[BUFFER_SIZE_IN_FRAME];
+                    for (int i = 0; i < read && total <= 4294967295L; i++, total+=2) {
+                        ByteBuffer byteBuffer = ByteBuffer.allocate(2);
+                        byteBuffer.putShort(buffer[i]);
+                        wavOut.write(byteBuffer.array());
                         tmpBuffer[i] = buffer[i];
                     }
                     if (this.streamListener != null) {
@@ -110,11 +114,17 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
                     }
                     run = false;
                 } else if (read >= 0) {
-                    // Write out the entire read buffer
-                    wavOut.write(buffer, 0, read);
-                    total += read;
+                    // Short array to byte array 
+                    ByteBuffer byteBuffer = ByteBuffer.allocate(buffer.length * 2);
+                    byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+                    byteBuffer.asShortBuffer().put(buffer);
+                    byte[] bytes = byteBuffer.array();
+
+                    wavOut.write(bytes, 0, read * 2);
+
+                    total += (read * 2); // 2 Byte = Short
                     if (this.streamListener != null) {
-                        Log.d("onDataReceived", "RecordWaveTask - " + buffer.length + "");
+                        Log.d("onDataReceived", "RecordWaveTask - " + read + "");
                         this.streamListener.onDataReceived(buffer.clone());
                     }
                 }

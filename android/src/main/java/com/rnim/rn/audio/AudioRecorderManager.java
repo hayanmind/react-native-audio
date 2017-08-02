@@ -150,10 +150,10 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
       recordTask.setStreamListener(new RecordWaveTask.OnStreamListener() {
 
         @Override
-        public void onDataReceived(byte[] buffer) {
+        public void onDataReceived(short[] buffer) {
           Log.d("onDataReceived", buffer.length + "");
           WritableArray body = Arguments.createArray();
-          for (byte value: buffer) {
+          for (short value: buffer) {
             body.pushInt((int) value);
           }
           sendEvent("dataReceived", body);
