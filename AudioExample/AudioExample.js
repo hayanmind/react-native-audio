@@ -25,8 +25,8 @@ class AudioExample extends Component {
     };
 
     prepareRecordingPath(audioPath){
-      AudioRecorder.prepareStreamingAtPath(this.state.audioPath, 8192, {
-          SampleRate: 22050,
+      AudioRecorder.prepareStreamingAtPath(this.state.audioPath, 1600, {
+          SampleRate: 16000,
           Channels: 1,
           // Following is not supported
           // AudioQuality: "Low",
@@ -56,7 +56,11 @@ class AudioExample extends Component {
         };
 
         AudioRecorder.onDataReceived = (data) => {
-          console.log(data);
+          // console.log(data);
+        }
+
+        AudioRecorder.onVadReceived = (vadResult) => {
+          console.log(vadResult);
         }
       });
     }

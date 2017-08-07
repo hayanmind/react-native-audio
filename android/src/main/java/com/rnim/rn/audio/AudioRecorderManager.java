@@ -160,6 +160,17 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
         }
       });
 
+      recordTask.setVadListener(new RecordWaveTask.OnVadListener() {
+
+        @Override
+        public void onVadReceived(int vadResult) {
+          Log.d("onVadReceived", vadResult + "");
+          // WritableMap body = Arguments.createMap();
+          // body.putInt("vadResult", vadResult);
+          sendEvent("vadReceived", vadResult);
+        }
+      });
+
       // int outputFormat = getOutputFormatFromString(recordingSettings.getString("OutputFormat"));
       // recorder.setOutputFormat(outputFormat);
       // int audioEncoder = getAudioEncoderFromString(recordingSettings.getString("AudioEncoding"));

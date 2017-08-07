@@ -15,6 +15,9 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
+import java.util.Arrays;
+import org.jtransforms.fft.FloatFFT_1D;
+
 /**
  * Created by KDH on 2017. 5. 15..
  */
@@ -27,9 +30,20 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
     private int ENCODING = AudioFormat.ENCODING_PCM_16BIT;
     private int CHANNEL_MASK = AudioFormat.CHANNEL_IN_MONO;
     private int BUFFER_SIZE_IN_FRAME = 8192;
+    private int vadSensitivity = 0;
+    private int vadTimeout = 7000;
     // int BUFFER_SIZE = 2 * AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_MASK, ENCODING);
 
     private File outputFile;
+
+    static {
+        System.loadLibrary("witvad");
+    }
+
+    public native int VadInit(int vadSensitivity, int vadTimeout);
+    public native int VadStillTalking(short[] samples, float[] fft_mags);
+    public native int GetVadSamplesPerFrame();
+    public native void VadClean();
 
     public RecordWaveTask() {}
     public void setAudioSource(int audioSource) { this.AUDIO_SOURCE = audioSource; }
@@ -43,6 +57,10 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
     public void setOutputFile(File file) { this.outputFile = file; }
 
     public void setBufferSize(int bufferSizeInFrame) { this.BUFFER_SIZE_IN_FRAME = bufferSizeInFrame; }
+
+    public void setVadSensitivity(int vadSensitivity) { this.vadSensitivity = vadSensitivity; }
+
+    public void setVadTimeout(int vadTimeout) { this.vadTimeout = vadTimeout; }
 
     // Step 1 - This interface defines the type of messages I want to communicate to my owner
     public interface OnCancelCompleteListener {
@@ -61,6 +79,15 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
 
     public void setStreamListener(OnStreamListener listener) {
         this.streamListener = listener;
+    }
+
+    public interface OnVadListener {
+        public void onVadReceived(int vadResult);
+    }
+    private OnVadListener vadListener = null;
+
+    public void setVadListener(OnVadListener listener) {
+        this.vadListener = listener;
     }
 
     /**
@@ -92,12 +119,46 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
             boolean run = true;
             int read;
             long total = 0;
+            int vadResult;
+
+            VadInit(vadSensitivity, vadTimeout);
+
+            FloatFFT_1D fft = new FloatFFT_1D(GetVadSamplesPerFrame());
+            float[] fft_mags = new float[GetVadSamplesPerFrame()/2];
+            float[] fft_modules = new float[GetVadSamplesPerFrame()];
+            short[] samples;
 
             // Let's go
             startTime = SystemClock.elapsedRealtime();
             audioRecord.startRecording();
             while (run && !isCancelled()) {
                 read = audioRecord.read(buffer, 0, buffer.length); // Count for 16 bit PCM
+
+                int samplesAnalyzed = 0;
+                while(samplesAnalyzed + GetVadSamplesPerFrame() < read){
+                    samples = Arrays.copyOfRange(buffer, samplesAnalyzed, samplesAnalyzed +GetVadSamplesPerFrame());
+                    for(int i=0; i<GetVadSamplesPerFrame(); i++){
+                        fft_modules[i] = (float)samples[i];
+                    }
+                    fft.realForward(fft_modules); //results are stored in place
+
+                    //transform to magnitudes
+                    fft_mags[0]=fft_modules[0];
+                    //the 0th (DC) component is different and has no imaginary part
+                    for(int i=1; i<GetVadSamplesPerFrame()/2; i++){
+                        fft_mags[i]=(float)Math.sqrt(Math.pow(fft_modules[2*i],2)+Math.pow(fft_modules[2*i+1],2));
+                    }
+
+                    vadResult = VadStillTalking(buffer, fft_mags);
+
+                    if (this.vadListener != null) {
+                        if (vadResult != -1) {
+                            this.vadListener.onVadReceived(vadResult);
+                        }
+                    }
+                    
+                    samplesAnalyzed+=GetVadSamplesPerFrame();
+                }                
 
                 // WAVs cannot be > 4 GB due to the use of 32 bit unsigned integers.
                 if (total + read > 4294967295L) {
@@ -136,6 +197,7 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
             if (audioRecord != null) {
                 try {
                     if (audioRecord.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING) {
+                        VadClean();
                         audioRecord.stop();
                         Log.d("RecordWaveTask", "audioRecord.stop()");
                         endTime = SystemClock.elapsedRealtime();

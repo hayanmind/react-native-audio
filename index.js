@@ -40,6 +40,15 @@ var AudioRecorder = {
       }
     );
 
+    if (this.vadReceivedSubscription) this.vadReceivedSubscription.remove();
+    this.vadReceivedSubscription = NativeAppEventEmitter.addListener('vadReceived',
+      (vadResult) => {
+        if (this.onVadReceived) {
+          this.onVadReceived(vadResult);
+        }
+      }
+    );
+
     var defaultOptions = {
       SampleRate: 44100.0,
       Channels: 1,
@@ -81,6 +90,7 @@ var AudioRecorder = {
     if (this.progressSubscription) this.progressSubscription.remove();
     if (this.finishedSubscription) this.finishedSubscription.remove();
     if (this.dataReceivedSubscription) this.dataReceivedSubscription.remove();
+    if (this.vadReceivedSubscription) this.vadReceivedSubscription.remove();
   },
 };
 
