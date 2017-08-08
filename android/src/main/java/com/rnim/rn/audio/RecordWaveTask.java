@@ -40,7 +40,7 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
         System.loadLibrary("witvad");
     }
 
-    public native int VadInit(int vadSensitivity, int vadTimeout);
+    public native int VadInit(int sampleRate, int vadSensitivity, int vadTimeout);
     public native int VadStillTalking(short[] samples, float[] fft_mags);
     public native int GetVadSamplesPerFrame();
     public native void VadClean();
@@ -121,7 +121,7 @@ public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
             long total = 0;
             int vadResult;
 
-            VadInit(vadSensitivity, vadTimeout);
+            VadInit(SAMPLE_RATE, vadSensitivity, vadTimeout);
 
             FloatFFT_1D fft = new FloatFFT_1D(GetVadSamplesPerFrame());
             float[] fft_mags = new float[GetVadSamplesPerFrame()/2];

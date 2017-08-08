@@ -4,9 +4,8 @@
 
 static s_wv_detector_cvad_state* wit_vad_g_struct = 0;
 
-int Java_com_rnim_rn_audio_RecordWaveTask_VadInit(JNIEnv *env, jobject obj, jint vadSensitivity, jint vadTimeout)
+int Java_com_rnim_rn_audio_RecordWaveTask_VadInit(JNIEnv *env, jobject obj, jint sample_rate, jint vadSensitivity, jint vadTimeout)
 {
-    int sample_rate = 16000;
     vadSensitivity = (int)fmax(0,fmin(100,vadSensitivity)); //bounds-checking
     wit_vad_g_struct = wv_detector_cvad_init(sample_rate, (int)vadSensitivity, (int)vadTimeout);
 
