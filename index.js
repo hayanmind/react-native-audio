@@ -12,7 +12,7 @@ import ReactNative, {
 var AudioRecorderManager = NativeModules.AudioRecorderManager;
 
 var AudioRecorder = {
-  prepareStreamingAtPath: function(path, bufferSize=8192, options) {
+  prepareStreamingAtPath: function(path, bufferSize=8192, options, vadOptions) {
     if (this.progressSubscription) this.progressSubscription.remove();
     this.progressSubscription = NativeAppEventEmitter.addListener('recordingProgress',
       (data) => {
@@ -61,6 +61,13 @@ var AudioRecorder = {
 
     var recordingOptions = {...defaultOptions, ...options};
 
+    var defaultVadOptions = {
+      Sensitivity: 0,
+      Timeout: 7000,
+    }
+
+    var vadOptions = {...defaultVadOptions, ...vadOptions};
+
     if (Platform.OS === 'ios') {
       AudioRecorderManager.prepareStreamingAtPath(
         path,
@@ -70,9 +77,11 @@ var AudioRecorder = {
         recordingOptions.AudioQuality,
         recordingOptions.AudioEncoding,
         recordingOptions.MeteringEnabled,
+        vadOptions.Sensitivity,
+        vadOptions.Timeout,
       );
     } else {
-      return AudioRecorderManager.prepareStreamingAtPath(path, bufferSize, recordingOptions);
+      return AudioRecorderManager.prepareStreamingAtPath(path, bufferSize, recordingOptions, vadOptions);
     }
   },
   startStreaming: function() {

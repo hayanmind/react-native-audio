@@ -18,7 +18,7 @@
 
 @property (nonatomic, assign) BOOL stoppedUsingVad;
 
-- (instancetype)initWithAudioSampleRate:(double)audioSampleRate vadSensitivity:(int)_vadSensitivity vadTimeout:(int)_vadTimeout;
+- (instancetype)initWithAudioSampleRate:(int)audioSampleRate vadSensitivity:(int)_vadSensitivity vadTimeout:(int)_vadTimeout;
 - (void)gotAudioSamples:(NSData *)samples;
 
 @end

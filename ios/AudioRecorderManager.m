@@ -35,6 +35,8 @@ NSString *const AudioRecorderEventVadReceived = @"vadReceived";
   NSNumber *_audioSampleRate;
   BOOL _meteringEnabled;
   int _bufferSize;
+  int _vadSensitivity;
+  int _vadTimeout;
 }
 
 StreamingModule* streamingModule;
@@ -128,7 +130,7 @@ RCT_EXPORT_METHOD(requestAuthorization:(RCTPromiseResolveBlock)resolve
   }];
 }
 
-RCT_EXPORT_METHOD(prepareStreamingAtPath:(NSString *)path bufferSize:(int)bufferSize sampleRate:(float)sampleRate channels:(nonnull NSNumber *)channels quality:(NSString *)quality encoding:(NSString *)encoding meteringEnabled:(BOOL)meteringEnabled)
+RCT_EXPORT_METHOD(prepareStreamingAtPath:(NSString *)path bufferSize:(int)bufferSize sampleRate:(float)sampleRate channels:(nonnull NSNumber *)channels quality:(NSString *)quality encoding:(NSString *)encoding meteringEnabled:(BOOL)meteringEnabled vadSensitivity:(int)vadSensitivity vadTimeout:(int)vadTimeout)
 {
     NSLog(@"prepareStreaming");
     _audioFileURL = [NSURL fileURLWithPath:path];
@@ -140,6 +142,8 @@ RCT_EXPORT_METHOD(prepareStreamingAtPath:(NSString *)path bufferSize:(int)buffer
     _audioSampleRate = [NSNumber numberWithFloat:44100.0];
     _meteringEnabled = NO;
     _bufferSize = 8192;
+    _vadSensitivity = 0;
+    _vadTimeout = 7000;
     
     // Set audio quality from options
     if (quality != nil) {
@@ -202,10 +206,13 @@ RCT_EXPORT_METHOD(prepareStreamingAtPath:(NSString *)path bufferSize:(int)buffer
         _meteringEnabled = meteringEnabled;
     }
     
+    _vadSensitivity = vadSensitivity;
+    _vadTimeout = vadTimeout;
+    
     if (vad == nil) {
-        vad = [[WITVad alloc] initWithAudioSampleRate:[_audioSampleRate doubleValue]
-                                        vadSensitivity:0
-                                            vadTimeout:7000];
+        vad = [[WITVad alloc] initWithAudioSampleRate:[_audioSampleRate intValue]
+                                        vadSensitivity:_vadSensitivity
+                                            vadTimeout:_vadTimeout];
         vad.delegate = self;
     }
     

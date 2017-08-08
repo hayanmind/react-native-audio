@@ -123,7 +123,7 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public void prepareStreamingAtPath(String recordingPath, int bufferSize, ReadableMap recordingSettings, Promise promise) {
+  public void prepareStreamingAtPath(String recordingPath, int bufferSize, ReadableMap recordingSettings, ReadableMap vadSettings, Promise promise) {
 
     try {
       File wavFile = new File(recordingPath);
@@ -142,6 +142,16 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
           channelMask = AudioFormat.CHANNEL_IN_MONO;
         }
         recordTask.setChannelMask(channelMask);
+      }
+
+      if (vadSettings.hasKey("Sensitivity")) {
+        int vadSensitivity = vadSettings.getInt("Sensitivity");
+        recordTask.setVadSensitivity(vadSensitivity);
+      }
+
+      if (vadSettings.hasKey("Timeout")) {
+        int vadTimeout = vadSettings.getInt("Timeout");
+        recordTask.setVadTimeout(vadTimeout);
       }
 
       recordTask.setBufferSize(bufferSize);

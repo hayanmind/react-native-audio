@@ -59,7 +59,7 @@
 
 }
 
-- (instancetype)initWithAudioSampleRate:(double)audioSampleRate vadSensitivity:(int)_vadSensitivity vadTimeout:(int)_vadTimeout {
+- (instancetype)initWithAudioSampleRate:(int)audioSampleRate vadSensitivity:(int)_vadSensitivity vadTimeout:(int)_vadTimeout {
     // debug(@"WITVad init");
     self = [super init];
     if (!self) {

@@ -32,6 +32,9 @@ class AudioExample extends Component {
           // AudioQuality: "Low",
           // AudioEncoding: "aac",
           // AudioEncodingBitRate: 32000,
+        }, {
+          Sensitivity: 0,
+          Timeout: 7000,
         });
     }
 
