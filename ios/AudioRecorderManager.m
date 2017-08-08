@@ -31,7 +31,6 @@ NSString *const AudioRecorderEventDataReceived = @"dataReceived";
   NSNumber *_audioEncoding;
   NSNumber *_audioChannels;
   NSNumber *_audioSampleRate;
-  AVAudioSession *_recordSession;
   BOOL _meteringEnabled;
   int _bufferSize;
 }
@@ -223,7 +222,7 @@ RCT_EXPORT_METHOD(startStreaming)
     NSLog(@"startStreaming");
     NSLog(@"%@", _audioFileURL);
     [self startProgressTimer];
-    [_recordSession setActive:YES error:nil];
+    [[AVAudioSession sharedInstance] setActive:YES error:nil];
     [streamingModule start];
 }
 
@@ -231,7 +230,7 @@ RCT_EXPORT_METHOD(stopStreaming)
 {
     NSLog(@"stopStreaming");
     [streamingModule stop];
-    [_recordSession setActive:NO error:nil];
+    [[AVAudioSession sharedInstance] setActive:NO error:nil];
     _prevProgressUpdateTime = nil;
     [self finishRecording: true];
 }
