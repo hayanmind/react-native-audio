@@ -13,10 +13,12 @@
 #import <React/RCTEventDispatcher.h>
 #import <AVFoundation/AVFoundation.h>
 #import "StreamingModule.h"
+#import "WITVad.h"
 
 NSString *const AudioRecorderEventProgress = @"recordingProgress";
 NSString *const AudioRecorderEventFinished = @"recordingFinished";
 NSString *const AudioRecorderEventDataReceived = @"dataReceived";
+NSString *const AudioRecorderEventVadReceived = @"vadReceived";
 
 @implementation AudioRecorderManager {
 
@@ -36,6 +38,7 @@ NSString *const AudioRecorderEventDataReceived = @"dataReceived";
 }
 
 StreamingModule* streamingModule;
+WITVad *vad;
 
 @synthesize bridge = _bridge;
 
@@ -199,6 +202,13 @@ RCT_EXPORT_METHOD(prepareStreamingAtPath:(NSString *)path bufferSize:(int)buffer
         _meteringEnabled = meteringEnabled;
     }
     
+    if (vad == nil) {
+        vad = [[WITVad alloc] initWithAudioSampleRate:[_audioSampleRate doubleValue]
+                                        vadSensitivity:0
+                                            vadTimeout:7000];
+        vad.delegate = self;
+    }
+    
     streamingModule = [[StreamingModule alloc] init];
     [streamingModule prepare:_audioFileURL
                   bufferSize:_bufferSize
@@ -211,6 +221,12 @@ RCT_EXPORT_METHOD(prepareStreamingAtPath:(NSString *)path bufferSize:(int)buffer
                                  NSNumber *value = [NSNumber numberWithInt:channelData[i]];
                                  [body addObject: value];
                              }
+                         }
+                         if (vad != nil) {
+                             int16_t *const int16ChannelData =[buf int16ChannelData][0];
+                             int length = buf.frameCapacity * buf.format.streamDescription->mBytesPerFrame;
+                             NSData *audio = [[NSData alloc] initWithBytes:int16ChannelData length:length];
+                             [vad gotAudioSamples:audio];
                          }
                          [self.bridge.eventDispatcher sendAppEventWithName:AudioRecorderEventDataReceived body:body];
                      }
@@ -232,6 +248,10 @@ RCT_EXPORT_METHOD(stopStreaming)
     [streamingModule stop];
     [[AVAudioSession sharedInstance] setActive:NO error:nil];
     _prevProgressUpdateTime = nil;
+    if (vad) {
+        vad.delegate = nil;
+        vad = nil;
+    }
     [self finishRecording: true];
 }
 
@@ -257,6 +277,16 @@ RCT_EXPORT_METHOD(pauseStreaming)
     @"NSDocumentDirectoryPath": [self getPathForDirectory:NSDocumentDirectory],
     @"NSLibraryDirectoryPath": [self getPathForDirectory:NSLibraryDirectory]
   };
+}
+
+-(void)vadStartedTalking {
+    NSLog(@"Started Talking");
+    [self.bridge.eventDispatcher sendAppEventWithName:AudioRecorderEventVadReceived body:[NSNumber numberWithInt:1]];
+}
+
+-(void)vadStoppedTalking {
+    NSLog(@"Stopped Talking");
+    [self.bridge.eventDispatcher sendAppEventWithName:AudioRecorderEventVadReceived body:[NSNumber numberWithInt:0]];
 }
 
 @end

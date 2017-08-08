@@ -9,7 +9,8 @@
 #import <React/RCTBridgeModule.h>
 #import <React/RCTLog.h>
 #import <AVFoundation/AVFoundation.h>
+#import "WITVad.h"
 
-@interface AudioRecorderManager : NSObject <RCTBridgeModule, AVAudioRecorderDelegate>
+@interface AudioRecorderManager : NSObject <RCTBridgeModule, AVAudioRecorderDelegate, WITVadDelegate>
 
 @end
