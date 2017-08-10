@@ -55,6 +55,7 @@ var AudioRecorder = {
       AudioQuality: 'High',
       AudioEncoding: 'ima4',
       MeteringEnabled: false,
+      AudioSource: 'DEFAULT',
       // OutputFormat: 'mpeg_4',
       // AudioEncodingBitRate: 32000
     };

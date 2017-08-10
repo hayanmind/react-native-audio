@@ -28,6 +28,7 @@ class AudioExample extends Component {
       AudioRecorder.prepareStreamingAtPath(this.state.audioPath, 1600, {
           SampleRate: 22050,
           Channels: 1,
+          AudioSource: 'MIC',
           // Following is not supported
           // AudioQuality: "Low",
           // AudioEncoding: "aac",

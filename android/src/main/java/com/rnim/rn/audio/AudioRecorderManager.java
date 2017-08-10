@@ -129,7 +129,22 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
       File wavFile = new File(recordingPath);
       recordTask = new RecordWaveTask();
 
-      recordTask.setAudioSource(MediaRecorder.AudioSource.MIC);
+      if (recordingSettings.hasKey("AudioSource")) {
+        switch(recordingSettings.getString("AudioSource")) {
+          case "DEFAULT":
+            recordTask.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
+            break;
+          case "MIC":
+            recordTask.setAudioSource(MediaRecorder.AudioSource.MIC);
+            break;
+          case "VOICE_RECOGNITION":
+            recordTask.setAudioSource(MediaRecorder.AudioSource.VOICE_RECOGNITION);
+            break;
+          default:
+            recordTask.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
+            break;
+        }
+      }
 
       if (recordingSettings.hasKey("SampleRate")) {
         recordTask.setSampleRate(recordingSettings.getInt("SampleRate"));

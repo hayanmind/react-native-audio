@@ -25,7 +25,7 @@ import org.jtransforms.fft.FloatFFT_1D;
 public class RecordWaveTask extends AsyncTask<File, Void, Object[]> {
 
     // Default value
-    private int AUDIO_SOURCE = MediaRecorder.AudioSource.MIC;
+    private int AUDIO_SOURCE = MediaRecorder.AudioSource.DEFAULT;
     private int SAMPLE_RATE = 44100; // Hz
     private int ENCODING = AudioFormat.ENCODING_PCM_16BIT;
     private int CHANNEL_MASK = AudioFormat.CHANNEL_IN_MONO;
