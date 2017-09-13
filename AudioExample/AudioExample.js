@@ -20,18 +20,23 @@ class AudioExample extends Component {
       recording: false,
       stoppedRecording: false,
       finished: false,
-      audioPath: AudioUtils.DocumentDirectoryPath + '/test.aac',
+      audioPath: AudioUtils.DocumentDirectoryPath + '/test.wav',
       hasPermission: undefined,
     };
 
     prepareRecordingPath(audioPath){
-      AudioRecorder.prepareRecordingAtPath(audioPath, {
-        SampleRate: 22050,
-        Channels: 1,
-        AudioQuality: "Low",
-        AudioEncoding: "aac",
-        AudioEncodingBitRate: 32000
-      });
+      AudioRecorder.prepareStreamingAtPath(this.state.audioPath, 1600, {
+          SampleRate: 22050,
+          Channels: 1,
+          AudioSource: 'MIC',
+          // Following is not supported
+          // AudioQuality: "Low",
+          // AudioEncoding: "aac",
+          // AudioEncodingBitRate: 32000,
+        }, {
+          Sensitivity: 0,
+          Timeout: 7000,
+        });
     }
 
     componentDidMount() {
@@ -41,7 +46,8 @@ class AudioExample extends Component {
         if (!hasPermission) return;
 
         this.prepareRecordingPath(this.state.audioPath);
-
+        console.log(this.state.audioPath);
+        console.log(AudioRecorder);
         AudioRecorder.onProgress = (data) => {
           this.setState({currentTime: Math.floor(data.currentTime)});
         };
@@ -52,6 +58,14 @@ class AudioExample extends Component {
             this._finishRecording(data.status === "OK", data.audioFileURL);
           }
         };
+
+        AudioRecorder.onDataReceived = (data) => {
+          // console.log(data);
+        }
+
+        AudioRecorder.onVadReceived = (vadResult) => {
+          console.log(vadResult);
+        }
       });
     }
 
@@ -93,7 +107,7 @@ class AudioExample extends Component {
       this.setState({stoppedRecording: true, recording: false});
 
       try {
-        const filePath = await AudioRecorder.pauseRecording();
+        const filePath = await AudioRecorder.pauseStreaming();
 
         // Pause is currently equivalent to stop on Android.
         if (Platform.OS === 'android') {
@@ -113,7 +127,7 @@ class AudioExample extends Component {
       this.setState({stoppedRecording: true, recording: false});
 
       try {
-        const filePath = await AudioRecorder.stopRecording();
+        const filePath = await AudioRecorder.stopStreaming();
 
         if (Platform.OS === 'android') {
           this._finishRecording(true, filePath);
@@ -168,7 +182,7 @@ class AudioExample extends Component {
       this.setState({recording: true});
 
       try {
-        const filePath = await AudioRecorder.startRecording();
+        const filePath = await AudioRecorder.startStreaming();
       } catch (error) {
         console.error(error);
       }

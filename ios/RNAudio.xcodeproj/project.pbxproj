@@ -7,7 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		38D7625B1EDD3F58007B8DE3 /* StreamingModule.m in Sources */ = {isa = PBXBuildFile; fileRef = 38D762591EDD3F58007B8DE3 /* StreamingModule.m */; };
 		429D457A1CFC96E100CBD51A /* AudioRecorderManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 429D45761CFC96E100CBD51A /* AudioRecorderManager.m */; };
+		7664CAD31F39482200FC59DE /* WITCvad.m in Sources */ = {isa = PBXBuildFile; fileRef = 7664CAD21F39482200FC59DE /* WITCvad.m */; };
+		7664CAD61F394C8100FC59DE /* WITVad.m in Sources */ = {isa = PBXBuildFile; fileRef = 7664CAD51F394C8100FC59DE /* WITVad.m */; };
+		76A04C0C1EDD91B800516515 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 76A04C0B1EDD91B800516515 /* AVFoundation.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -23,9 +27,16 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		38D762591EDD3F58007B8DE3 /* StreamingModule.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StreamingModule.m; sourceTree = SOURCE_ROOT; };
+		38D7625A1EDD3F58007B8DE3 /* StreamingModule.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StreamingModule.h; sourceTree = SOURCE_ROOT; };
 		429D45761CFC96E100CBD51A /* AudioRecorderManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AudioRecorderManager.m; sourceTree = SOURCE_ROOT; };
 		429D45771CFC96E100CBD51A /* AudioRecorderManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AudioRecorderManager.h; sourceTree = SOURCE_ROOT; };
 		42F559BA1CFC90C400DC3F84 /* libRNAudio.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libRNAudio.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		7664CAD11F39482200FC59DE /* WITCvad.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WITCvad.h; sourceTree = SOURCE_ROOT; };
+		7664CAD21F39482200FC59DE /* WITCvad.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = WITCvad.m; sourceTree = SOURCE_ROOT; };
+		7664CAD41F394C8100FC59DE /* WITVad.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WITVad.h; sourceTree = SOURCE_ROOT; };
+		7664CAD51F394C8100FC59DE /* WITVad.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = WITVad.m; sourceTree = SOURCE_ROOT; };
+		76A04C0B1EDD91B800516515 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -33,6 +44,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				76A04C0C1EDD91B800516515 /* AVFoundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -44,6 +56,7 @@
 			children = (
 				42F559BC1CFC90C400DC3F84 /* RNAudio */,
 				42F559BB1CFC90C400DC3F84 /* Products */,
+				76A04C0A1EDD91B700516515 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -58,10 +71,24 @@
 		42F559BC1CFC90C400DC3F84 /* RNAudio */ = {
 			isa = PBXGroup;
 			children = (
+				7664CAD41F394C8100FC59DE /* WITVad.h */,
+				7664CAD51F394C8100FC59DE /* WITVad.m */,
+				7664CAD11F39482200FC59DE /* WITCvad.h */,
+				7664CAD21F39482200FC59DE /* WITCvad.m */,
 				429D45761CFC96E100CBD51A /* AudioRecorderManager.m */,
 				429D45771CFC96E100CBD51A /* AudioRecorderManager.h */,
+				38D762591EDD3F58007B8DE3 /* StreamingModule.m */,
+				38D7625A1EDD3F58007B8DE3 /* StreamingModule.h */,
 			);
 			path = RNAudio;
+			sourceTree = "<group>";
+		};
+		76A04C0A1EDD91B700516515 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				76A04C0B1EDD91B800516515 /* AVFoundation.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -120,6 +147,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				38D7625B1EDD3F58007B8DE3 /* StreamingModule.m in Sources */,
+				7664CAD31F39482200FC59DE /* WITCvad.m in Sources */,
+				7664CAD61F394C8100FC59DE /* WITVad.m in Sources */,
 				429D457A1CFC96E100CBD51A /* AudioRecorderManager.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -12,13 +12,17 @@
 #import <React/RCTUtils.h>
 #import <React/RCTEventDispatcher.h>
 #import <AVFoundation/AVFoundation.h>
+#import "StreamingModule.h"
+#import "WITVad.h"
 
 NSString *const AudioRecorderEventProgress = @"recordingProgress";
 NSString *const AudioRecorderEventFinished = @"recordingFinished";
+NSString *const AudioRecorderEventDataReceived = @"dataReceived";
+NSString *const AudioRecorderEventVadReceived = @"vadReceived";
 
 @implementation AudioRecorderManager {
 
-  AVAudioRecorder *_audioRecorder;
+  // AVAudioRecorder *_audioRecorder;
 
   NSTimeInterval _currentTime;
   id _progressUpdateTimer;
@@ -29,17 +33,22 @@ NSString *const AudioRecorderEventFinished = @"recordingFinished";
   NSNumber *_audioEncoding;
   NSNumber *_audioChannels;
   NSNumber *_audioSampleRate;
-  AVAudioSession *_recordSession;
   BOOL _meteringEnabled;
+  int _bufferSize;
+  int _vadSensitivity;
+  int _vadTimeout;
 }
+
+StreamingModule* streamingModule;
+WITVad *vad;
 
 @synthesize bridge = _bridge;
 
 RCT_EXPORT_MODULE();
 
 - (void)sendProgressUpdate {
-  if (_audioRecorder && _audioRecorder.recording) {
-    _currentTime = _audioRecorder.currentTime;
+  if (streamingModule && streamingModule->recording) {
+    _currentTime = streamingModule->currentTime;
   } else {
     return;
   }
@@ -48,11 +57,13 @@ RCT_EXPORT_MODULE();
    (([_prevProgressUpdateTime timeIntervalSinceNow] * -1000.0) >= _progressUpdateInterval)) {
       NSMutableDictionary *body = [[NSMutableDictionary alloc] init];
       [body setObject:[NSNumber numberWithFloat:_currentTime] forKey:@"currentTime"];
+      /*
       if (_meteringEnabled) {
           [_audioRecorder updateMeters];
           float _currentMetering = [_audioRecorder averagePowerForChannel: 0];
           [body setObject:[NSNumber numberWithFloat:_currentMetering] forKey:@"currentMetering"];
       }
+       */
 
       [self.bridge.eventDispatcher sendAppEventWithName:AudioRecorderEventProgress body:body];
 
@@ -74,10 +85,10 @@ RCT_EXPORT_MODULE();
   [_progressUpdateTimer addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
 }
 
-- (void)audioRecorderDidFinishRecording:(AVAudioRecorder *)recorder successfully:(BOOL)flag {
-  [self.bridge.eventDispatcher sendAppEventWithName:AudioRecorderEventFinished body:@{
-      @"status": flag ? @"OK" : @"ERROR",
-      @"audioFileURL": [_audioFileURL absoluteString]
+- (void)finishRecording:(BOOL)flag {
+    [self.bridge.eventDispatcher sendAppEventWithName:AudioRecorderEventFinished body:@{
+        @"status": flag ? @"OK" : @"ERROR",
+        @"audioFileURL": [_audioFileURL absoluteString]
     }];
 }
 
@@ -86,124 +97,6 @@ RCT_EXPORT_MODULE();
   NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
   NSString *basePath = ([paths count] > 0) ? [paths objectAtIndex:0] : nil;
   return basePath;
-}
-
-RCT_EXPORT_METHOD(prepareRecordingAtPath:(NSString *)path sampleRate:(float)sampleRate channels:(nonnull NSNumber *)channels quality:(NSString *)quality encoding:(NSString *)encoding meteringEnabled:(BOOL)meteringEnabled)
-{
-  _prevProgressUpdateTime = nil;
-  [self stopProgressTimer];
-
-  _audioFileURL = [NSURL fileURLWithPath:path];
-
-  // Default options
-  _audioQuality = [NSNumber numberWithInt:AVAudioQualityHigh];
-  _audioEncoding = [NSNumber numberWithInt:kAudioFormatAppleIMA4];
-  _audioChannels = [NSNumber numberWithInt:2];
-  _audioSampleRate = [NSNumber numberWithFloat:44100.0];
-  _meteringEnabled = NO;
-
-  // Set audio quality from options
-  if (quality != nil) {
-    if ([quality  isEqual: @"Low"]) {
-      _audioQuality =[NSNumber numberWithInt:AVAudioQualityLow];
-    } else if ([quality  isEqual: @"Medium"]) {
-      _audioQuality =[NSNumber numberWithInt:AVAudioQualityMedium];
-    } else if ([quality  isEqual: @"High"]) {
-      _audioQuality =[NSNumber numberWithInt:AVAudioQualityHigh];
-    }
-  }
-
-  // Set channels from options
-  if (channels != nil) {
-    _audioChannels = channels;
-  }
-
-  // Set audio encoding from options
-  if (encoding != nil) {
-    if ([encoding  isEqual: @"lpcm"]) {
-      _audioEncoding =[NSNumber numberWithInt:kAudioFormatLinearPCM];
-    } else if ([encoding  isEqual: @"ima4"]) {
-      _audioEncoding =[NSNumber numberWithInt:kAudioFormatAppleIMA4];
-    } else if ([encoding  isEqual: @"aac"]) {
-      _audioEncoding =[NSNumber numberWithInt:kAudioFormatMPEG4AAC];
-    } else if ([encoding  isEqual: @"MAC3"]) {
-      _audioEncoding =[NSNumber numberWithInt:kAudioFormatMACE3];
-    } else if ([encoding  isEqual: @"MAC6"]) {
-      _audioEncoding =[NSNumber numberWithInt:kAudioFormatMACE6];
-    } else if ([encoding  isEqual: @"ulaw"]) {
-      _audioEncoding =[NSNumber numberWithInt:kAudioFormatULaw];
-    } else if ([encoding  isEqual: @"alaw"]) {
-      _audioEncoding =[NSNumber numberWithInt:kAudioFormatALaw];
-    } else if ([encoding  isEqual: @"mp1"]) {
-      _audioEncoding =[NSNumber numberWithInt:kAudioFormatMPEGLayer1];
-    } else if ([encoding  isEqual: @"mp2"]) {
-      _audioEncoding =[NSNumber numberWithInt:kAudioFormatMPEGLayer2];
-    } else if ([encoding  isEqual: @"alac"]) {
-      _audioEncoding =[NSNumber numberWithInt:kAudioFormatAppleLossless];
-    } else if ([encoding  isEqual: @"amr"]) {
-      _audioEncoding =[NSNumber numberWithInt:kAudioFormatAMR];
-    }
-  }
-
-  // Set sample rate from options
-  _audioSampleRate = [NSNumber numberWithFloat:sampleRate];
-
-  NSDictionary *recordSettings = [NSDictionary dictionaryWithObjectsAndKeys:
-          _audioQuality, AVEncoderAudioQualityKey,
-          _audioEncoding, AVFormatIDKey,
-          _audioChannels, AVNumberOfChannelsKey,
-          _audioSampleRate, AVSampleRateKey,
-          nil];
-
-  // Enable metering from options
-  if (meteringEnabled != NO) {
-    _meteringEnabled = meteringEnabled;
-  }
-
-  NSError *error = nil;
-
-  _recordSession = [AVAudioSession sharedInstance];
-  [_recordSession setCategory:AVAudioSessionCategoryMultiRoute error:nil];
-
-  _audioRecorder = [[AVAudioRecorder alloc]
-                initWithURL:_audioFileURL
-                settings:recordSettings
-                error:&error];
-
-  _audioRecorder.meteringEnabled = _meteringEnabled;
-  _audioRecorder.delegate = self;
-
-  if (error) {
-      NSLog(@"error: %@", [error localizedDescription]);
-      // TODO: dispatch error over the bridge
-    } else {
-      [_audioRecorder prepareToRecord];
-  }
-}
-
-RCT_EXPORT_METHOD(startRecording)
-{
-  if (!_audioRecorder.recording) {
-    [self startProgressTimer];
-    [_recordSession setActive:YES error:nil];
-    [_audioRecorder record];
-
-  }
-}
-
-RCT_EXPORT_METHOD(stopRecording)
-{
-  [_audioRecorder stop];
-  [_recordSession setActive:NO error:nil];
-  _prevProgressUpdateTime = nil;
-}
-
-RCT_EXPORT_METHOD(pauseRecording)
-{
-  if (_audioRecorder.recording) {
-    [self stopProgressTimer];
-    [_audioRecorder pause];
-  }
 }
 
 RCT_EXPORT_METHOD(checkAuthorizationStatus:(RCTPromiseResolveBlock)resolve reject:(__unused RCTPromiseRejectBlock)reject)
@@ -237,6 +130,146 @@ RCT_EXPORT_METHOD(requestAuthorization:(RCTPromiseResolveBlock)resolve
   }];
 }
 
+RCT_EXPORT_METHOD(prepareStreamingAtPath:(NSString *)path bufferSize:(int)bufferSize sampleRate:(float)sampleRate channels:(nonnull NSNumber *)channels quality:(NSString *)quality encoding:(NSString *)encoding meteringEnabled:(BOOL)meteringEnabled vadSensitivity:(int)vadSensitivity vadTimeout:(int)vadTimeout)
+{
+    NSLog(@"prepareStreaming");
+    _audioFileURL = [NSURL fileURLWithPath:path];
+    
+    // Default options
+    _audioQuality = [NSNumber numberWithInt:AVAudioQualityHigh];
+    _audioEncoding = [NSNumber numberWithInt:kAudioFormatAppleIMA4];
+    _audioChannels = [NSNumber numberWithInt:1];
+    _audioSampleRate = [NSNumber numberWithFloat:44100.0];
+    _meteringEnabled = NO;
+    _bufferSize = 8192;
+    _vadSensitivity = 0;
+    _vadTimeout = 7000;
+    
+    // Set audio quality from options
+    if (quality != nil) {
+        if ([quality  isEqual: @"Low"]) {
+            _audioQuality =[NSNumber numberWithInt:AVAudioQualityLow];
+        } else if ([quality  isEqual: @"Medium"]) {
+            _audioQuality =[NSNumber numberWithInt:AVAudioQualityMedium];
+        } else if ([quality  isEqual: @"High"]) {
+            _audioQuality =[NSNumber numberWithInt:AVAudioQualityHigh];
+        }
+    }
+    
+    // Set channels from options
+    if (channels != nil) {
+        _audioChannels = channels;
+    }
+    
+    // Set audio encoding from options
+    if (encoding != nil) {
+        if ([encoding  isEqual: @"lpcm"]) {
+            _audioEncoding =[NSNumber numberWithInt:kAudioFormatLinearPCM];
+        } else if ([encoding  isEqual: @"ima4"]) {
+            _audioEncoding =[NSNumber numberWithInt:kAudioFormatAppleIMA4];
+        } else if ([encoding  isEqual: @"aac"]) {
+            _audioEncoding =[NSNumber numberWithInt:kAudioFormatMPEG4AAC];
+        } else if ([encoding  isEqual: @"MAC3"]) {
+            _audioEncoding =[NSNumber numberWithInt:kAudioFormatMACE3];
+        } else if ([encoding  isEqual: @"MAC6"]) {
+            _audioEncoding =[NSNumber numberWithInt:kAudioFormatMACE6];
+        } else if ([encoding  isEqual: @"ulaw"]) {
+            _audioEncoding =[NSNumber numberWithInt:kAudioFormatULaw];
+        } else if ([encoding  isEqual: @"alaw"]) {
+            _audioEncoding =[NSNumber numberWithInt:kAudioFormatALaw];
+        } else if ([encoding  isEqual: @"mp1"]) {
+            _audioEncoding =[NSNumber numberWithInt:kAudioFormatMPEGLayer1];
+        } else if ([encoding  isEqual: @"mp2"]) {
+            _audioEncoding =[NSNumber numberWithInt:kAudioFormatMPEGLayer2];
+        } else if ([encoding  isEqual: @"alac"]) {
+            _audioEncoding =[NSNumber numberWithInt:kAudioFormatAppleLossless];
+        } else if ([encoding  isEqual: @"amr"]) {
+            _audioEncoding =[NSNumber numberWithInt:kAudioFormatAMR];
+        }
+    }
+    
+    // Set sample rate from options
+    _audioSampleRate = [NSNumber numberWithFloat:sampleRate];
+    
+    // Set buffer size from options
+    _bufferSize = bufferSize;
+    
+    NSDictionary *recordSettings = [NSDictionary dictionaryWithObjectsAndKeys:
+                                    //_audioQuality, AVEncoderAudioQualityKey,
+                                    //_audioEncoding, AVFormatIDKey,
+                                    _audioChannels, AVNumberOfChannelsKey,
+                                    _audioSampleRate, AVSampleRateKey,
+                                    nil];
+    
+    // Enable metering from options
+    if (meteringEnabled != NO) {
+        _meteringEnabled = meteringEnabled;
+    }
+    
+    _vadSensitivity = vadSensitivity;
+    _vadTimeout = vadTimeout;
+    
+    if (vad == nil) {
+        vad = [[WITVad alloc] initWithAudioSampleRate:[_audioSampleRate intValue]
+                                        vadSensitivity:_vadSensitivity
+                                            vadTimeout:_vadTimeout];
+        vad.delegate = self;
+    }
+    
+    streamingModule = [[StreamingModule alloc] init];
+    [streamingModule prepare:_audioFileURL
+                  bufferSize:_bufferSize
+                    settings:recordSettings
+                     handler:^(AVAudioPCMBuffer *buf){
+                         NSMutableArray *body = [[NSMutableArray alloc] init];
+                         for(int i=0; i<buf.frameLength; i++) {
+                             for (int channel=0; channel<buf.format.channelCount; channel++) {
+                                 int16_t * const channelData = [buf int16ChannelData][channel];
+                                 NSNumber *value = [NSNumber numberWithInt:channelData[i]];
+                                 [body addObject: value];
+                             }
+                         }
+                         if (vad != nil) {
+                             int16_t *const int16ChannelData =[buf int16ChannelData][0];
+                             int length = buf.frameCapacity * buf.format.streamDescription->mBytesPerFrame;
+                             NSData *audio = [[NSData alloc] initWithBytes:int16ChannelData length:length];
+                             [vad gotAudioSamples:audio];
+                         }
+                         [self.bridge.eventDispatcher sendAppEventWithName:AudioRecorderEventDataReceived body:body];
+                     }
+     ];
+}
+
+RCT_EXPORT_METHOD(startStreaming)
+{
+    NSLog(@"startStreaming");
+    NSLog(@"%@", _audioFileURL);
+    [self startProgressTimer];
+    [[AVAudioSession sharedInstance] setActive:YES error:nil];
+    [streamingModule start];
+}
+
+RCT_EXPORT_METHOD(stopStreaming)
+{
+    NSLog(@"stopStreaming");
+    [streamingModule stop];
+    [[AVAudioSession sharedInstance] setActive:NO error:nil];
+    _prevProgressUpdateTime = nil;
+    if (vad) {
+        vad.delegate = nil;
+        vad = nil;
+    }
+    [self finishRecording: true];
+}
+
+RCT_EXPORT_METHOD(pauseStreaming)
+{
+    NSLog(@"pauseStreaming");
+    [self stopProgressTimer];
+    [streamingModule pause];
+}
+
+
 - (NSString *)getPathForDirectory:(int)directory
 {
   NSArray *paths = NSSearchPathForDirectoriesInDomains(directory, NSUserDomainMask, YES);
@@ -251,6 +284,16 @@ RCT_EXPORT_METHOD(requestAuthorization:(RCTPromiseResolveBlock)resolve
     @"NSDocumentDirectoryPath": [self getPathForDirectory:NSDocumentDirectory],
     @"NSLibraryDirectoryPath": [self getPathForDirectory:NSLibraryDirectory]
   };
+}
+
+-(void)vadStartedTalking {
+    NSLog(@"Started Talking");
+    [self.bridge.eventDispatcher sendAppEventWithName:AudioRecorderEventVadReceived body:[NSNumber numberWithInt:1]];
+}
+
+-(void)vadStoppedTalking {
+    NSLog(@"Stopped Talking");
+    [self.bridge.eventDispatcher sendAppEventWithName:AudioRecorderEventVadReceived body:[NSNumber numberWithInt:0]];
 }
 
 @end

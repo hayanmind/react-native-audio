@@ -9,6 +9,10 @@ android {
         targetSdkVersion 23
         versionCode 1
         versionName "1.0"
+        ndk {
+            moduleName "witvad"
+            ldLibs "log"
+        }
     }
     buildTypes {
         release {
@@ -21,4 +25,5 @@ dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
     compile 'com.android.support:appcompat-v7:23.1.0'
     compile 'com.facebook.react:react-native:+'
+    compile 'com.github.wendykierp:JTransforms:3.0'
 }
