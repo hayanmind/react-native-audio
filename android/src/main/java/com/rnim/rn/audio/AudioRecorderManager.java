@@ -237,7 +237,7 @@ class AudioRecorderManager extends ReactContextBaseJavaModule {
   @ReactMethod
   public void stopStreaming(final Promise promise){
     Log.d("RecordWaveTask", "stopStreaming");
-    if (!recordTask.isCancelled() && recordTask.getStatus() == AsyncTask.Status.RUNNING) {
+    if (recordTask != null && !recordTask.isCancelled() && recordTask.getStatus() == AsyncTask.Status.RUNNING) {
       Log.d("RecordWaveTask", "stopStreaming2");
       isRecording = false;
       recordTask.setCancelCompleteListener(new RecordWaveTask.OnCancelCompleteListener() {
